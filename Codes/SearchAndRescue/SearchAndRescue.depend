@@ -1,0 +1,28 @@
+# depslib dependency file v1.0
+1709381399 source:c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\main.cpp
+	<iostream>
+	"graph.hpp"
+	"grid.hpp"
+	"grid_functions.hpp"
+
+1709377543 c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\graph.hpp
+	<cassert>
+	<iostream>
+
+1709377709 source:c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\grid_functions.cpp
+
+1709056132 c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\grid_functions.cpp
+
+1709381356 source:c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\grid.cpp
+	<iostream>
+	"grid.hpp"
+	<algorithm>
+
+1709381352 c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\grid.hpp
+	<string>
+	<vector>
+
+1709377709 c:\users\eozka\desktop\search-and-rescue-algorithm\searchandrescue\grid_functions.hpp
+	<iostream>
+	"grid.hpp"
+
