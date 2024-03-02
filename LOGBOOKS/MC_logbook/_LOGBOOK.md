@@ -1,5 +1,5 @@
 # Ad-Hoc-Network-Communication-System-for-Disaster-Relief
-Eda Özkaynar's LogBook
+Mustafa's LogBook
 
 ## Week 1  
 
