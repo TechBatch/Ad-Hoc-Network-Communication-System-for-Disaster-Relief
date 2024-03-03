@@ -39,4 +39,4 @@ First week of the semester. Meeting with DS coordinator.
 
     - https://www.youtube.com/watch?v=aPjONdduElw&list=PLEWDbWMyVbuq8gc9yPNDeYrzjyZwL62DU
 
-## Week Mar. 4-10
+## Week 3 Mar. 4-10
