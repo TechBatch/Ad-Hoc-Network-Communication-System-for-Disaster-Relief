@@ -19,7 +19,7 @@ First week of the semester. Meeting with DS coordinator.
         * Neighbors vector is added.
         * Tile status change function added.
 
-        *What will be done:*
+        *TO DO:*
 
         * Add setWeight vector.
         * Add an enum class for Base and target tiles.
