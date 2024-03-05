@@ -34,9 +34,9 @@ void ileri(){
  motor_4.setSpeed(ss);
  
  motor_1.run(FORWARD);
- motor_2.run(RELEASE);
+ motor_2.run(BACKWARD);
  motor_3.run(BACKWARD);
- motor_4.run(RELEASE);
+ motor_4.run(FORWARD);
 
   
 }
@@ -106,8 +106,8 @@ void loop() {
 
  delay(5000);
 
- sag();
- delay(5000);
+// sag();
+// delay(5000);
 /*     
  geri();
  delay(5000);
