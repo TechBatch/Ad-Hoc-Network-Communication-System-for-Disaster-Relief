@@ -261,10 +261,41 @@
 /*************************************************/
 /*******************RFID PINS*********************/
 
-UINT32 mu1_message = 0;
-UINT32 mu2_message = 0;
-UINT32 mu3_message = 0;
 
+/*************************************************/
+/*******************STRUCTS*********************/
+
+
+typedef struct
+{
+    UINT32 uiMessage = 0;
+    unsigned int uiName;
+    unsigned int uiFinding;
+    unsigned int uiReceivement;
+    unsigned int uiOccupation;
+    unsigned int uiCurrentLocation;
+    unsigned int uiTargetLocation = 0x00;
+}MU;
+
+typedef struct
+{
+    UINT32 uiMessage = 0;
+    unsigned int uiName;
+    unsigned int uiFinding;
+    unsigned int uiReceivement;
+    unsigned int uiOccupation;
+    unsigned int uiTargetLocation = 0x00;
+}BU;
+
+/**************************/
+
+MU mu1;
+MU mu2;
+MU mu3;
+
+BU bu1;
+BU bu2;
+BU bu3;
 int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
 
 int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue,
@@ -273,15 +304,15 @@ int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int u
     switch(uiHeader)
     {
         case MU1_NAME:
-            mu1_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
+            mu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
         break;
 
         case MU2_NAME:
-            mu2_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
+            mu2.uiMessage= ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
         break;
 
         case MU3_NAME:
-            mu3_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
+            mu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
         break;
     }
 }
@@ -293,15 +324,16 @@ int createBUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int u
     switch(uiHeader)
     {
         case BU1_NAME:
-            mu1_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
+            bu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
         break;
 
         case BU2_NAME:
-            mu2_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
+            bu2.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
         break;
 
         case BU3_NAME:
-            mu3_message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
+            bu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
         break;
     }
 }
+
