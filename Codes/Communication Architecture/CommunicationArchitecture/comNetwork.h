@@ -3,6 +3,10 @@
 #include <math.h>
 #include <string.h>
 
+/**************************************************/
+#define DECODE_NEC
+#include <IRremote.hpp>
+#include <Arduino.h>
 
 
 
@@ -268,7 +272,7 @@
 
 typedef struct
 {
-    UINT32 uiMessage = 0;
+    unsigned int uiMessage = 0;
     unsigned int uiName;
     unsigned int uiFinding;
     unsigned int uiReceivement;
@@ -279,7 +283,7 @@ typedef struct
 
 typedef struct
 {
-    UINT32 uiMessage = 0;
+    unsigned int uiMessage = 0;
     unsigned int uiName;
     unsigned int uiFinding;
     unsigned int uiReceivement;
@@ -296,44 +300,13 @@ MU mu3;
 BU bu1;
 BU bu2;
 BU bu3;
+
+
 int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
-
-int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue,
-                     unsigned int uiCurrentLocation, unsigned int uiTargetLocation)
-{
-    switch(uiHeader)
-    {
-        case MU1_NAME:
-            mu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-
-        case MU2_NAME:
-            mu2.uiMessage= ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-
-        case MU3_NAME:
-            mu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-    }
-}
-
 int createBUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue, unsigned int uiTargetLocation);
+void parseMUMessage(unsigned int message);
+void parseBUMessage(unsigned int message);
 
-int createBUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue, unsigned int uiTargetLocation)
-{
-    switch(uiHeader)
-    {
-        case BU1_NAME:
-            bu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
 
-        case BU2_NAME:
-            bu2.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
 
-        case BU3_NAME:
-            bu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
-    }
-}
 
