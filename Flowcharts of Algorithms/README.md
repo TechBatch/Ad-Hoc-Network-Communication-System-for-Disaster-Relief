@@ -3,6 +3,7 @@
 TechBatch 2023-24 Capstone Project
 ## Link for search algorithm flowchart
 https://app.diagrams.net/#G1cPadi86MyawuQ8vJ1zWhPavOyXc6iH4G
-
+  ### TO DO:
+  * Add other MU's target info according to code architecture algorithm.
 ## Link for Grid partitioning
 https://app.diagrams.net/#G1-ycmmlxIB4yDz8SyxYrDLsC9prfCw-PL
