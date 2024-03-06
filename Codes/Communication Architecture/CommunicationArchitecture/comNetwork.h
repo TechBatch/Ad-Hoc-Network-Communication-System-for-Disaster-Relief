@@ -4,7 +4,7 @@
 #include <string.h>
 
 /**************************************************/
-#define DECODE_NEC
+//#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
 
