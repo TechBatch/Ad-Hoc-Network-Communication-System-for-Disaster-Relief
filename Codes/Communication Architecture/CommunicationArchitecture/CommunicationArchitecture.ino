@@ -3,13 +3,29 @@
 
 unsigned int uiMUAddress, uiMUCommand, uiMUHeader;
 
-MU mu1;
-MU mu2;
-MU mu3;
+infoMU MU1;
+infoMU MU2;
+infoMU MU3;
 
-BU bu1;
-BU bu2;
-BU bu3;
+infoBU BU1;
+infoBU BU2;
+infoBU BU3;
+
+msgMU msgMU1;
+msgMU msgMU2;
+msgMU msgMU3;
+
+msgBU msgBU1;
+msgBU msgBU2;
+msgBU msgBU3;
+
+msgMU1.uiMUHeader = MU1_NAME;
+msgMU2.uiMUHeader = MU2_NAME;
+msgMU3.uiMUHeader = MU3_NAME;
+
+msgBU1.uiMUHeader = BU1_NAME;
+msgBU2.uiMUHeader = BU2_NAME;
+msgBU3.uiMUHeader = BU3_NAME;
 
 void setup() {
   // put your setup code here, to run once:
@@ -22,58 +38,104 @@ void loop() {
 }
 
 
-int createMUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue,
-                     unsigned int uiCurrentLocation, unsigned int uiTargetLocation)
+unsigned int createMUMessage(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation)
 {
-    switch(uiHeader)
-    {
-        case MU1_NAME:
-            mu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-
-        case MU2_NAME:
-            mu2.uiMessage= ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-
-        case MU3_NAME:
-            mu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 19) | (uiReceive << 18) | (uiContinue << 17) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-        break;
-    }
+  unsigned int message;
+  message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiReceivement << 18) | (uiFinding << 16) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
+  Serial.print("Mobile Unit Message: ");
+  Serial.println(message, HEX);
+  return message;
 }
 
-int createBUMessage(unsigned int uiHeader, unsigned int uiTarget, unsigned int uiReceive, unsigned int uiContinue, unsigned int uiTargetLocation)
+int createBUMessage(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiAvailable, unsigned int uiKnowing, unsigned int uiTargetLocation)
 {
-    switch(uiHeader)
-    {
-        case BU1_NAME:
-            bu1.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
-
-        case BU2_NAME:
-            bu2.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
-
-        case BU3_NAME:
-            bu3.uiMessage = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiTarget << 16) | (uiReceive << 12) | (uiContinue << 8) | (uiTargetLocation << 0);
-        break;
-    }
+  unsigned int message;
+  message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiReceivement << 16) | (uiAvailable << 12) | (uiKnowing << 8) | (uiTargetLocation << 0);
+  Serial.print("Base Message: ");
+  Serial.println(message, HEX);
+  return message;
 }
 
-void parseMUMessage(unsigned int message)
+void parseMUMessage(unsigned int message) //BU parses the message coming from MU
 {
-  uiMUAddress = IrReceiver.decodedIRData.address;
-  uiMUCommand = IrReceiver.decodedIRData.command;
-  uiMUHeader = ((uiMUAddress >> 20) & 0xFF);
-
-  switch(uiMUHeader)
+  unsigned int uiHeader = (message | 0x00F00000) >> 20;
+  unsigned int uiReceivement = (message | 0x000C0000) >> 18;
+  unsigned int uiFinding = (message | 0x00030000) >> 16;
+  unsigned int uiCurrentLocation = (message | 0x0000FF00) >> 8;
+  unsigned int uiTargetLocation = (message | 0x000000FF) >> 0;
+  
+  switch(uiHeader)
   {
-
     case MU1_NAME:
-      mu1.
 
+      BU1.uiMUHeader = uiHeader;
+      BU1.uiMUReceivement = uiReceivement;
+      BU1.uiMUFinding = uiFinding;
+      BU1.uiMUCurrentLocation = uiCurrentLocation;
+      BU1.uiMUTargetLocation = uiTargetLocation;
+
+    break;
+
+    case MU2_NAME:
+
+      BU2.uiMUHeader = uiHeader;
+      BU2.uiMUReceivement = uiReceivement;
+      BU2.uiMUFinding = uiFinding;
+      BU2.uiMUCurrentLocation = uiCurrentLocation;
+      BU2.uiMUTargetLocation = uiTargetLocation;
+
+    break;
+
+    case MU3_NAME:
+
+      BU3.uiMUHeader = uiHeader;
+      BU3.uiMUReceivement = uiReceivement;
+      BU3.uiMUFinding = uiFinding;
+      BU3.uiMUCurrentLocation = uiCurrentLocation;
+      BU3.uiMUTargetLocation = uiTargetLocation;
+
+    break;
   }
-
-
-
 }
 
+void parseBUMessage(unsigned int message) //MU parses the message coming from BU
+{
+  unsigned int uiHeader = (message | 0x00F00000) >> 20;
+  unsigned int uiReceivement = (message | 0x000F0000) >> 16;
+  unsigned int uiAvailable = (message | 0x0000F000) >> 12;
+  unsigned int uiKnowing = (message | 0x00000F00) >> 8;
+  unsigned int uiTargetLocation = (message | 0x000000FF) >> 0;
+  
+  switch(uiHeader)
+  {
+    case BU1_NAME:
+
+      MU1.uiBUHeader = uiHeader;
+      MU1.uiBUReceivement = uiReceivement;
+      MU1.uiBUAvailable = uiAvailable;
+      MU1.uiBUKnowledge = uiKnowing;
+      MU1.uiBUTargetLocation = uiTargetLocation;
+
+    break;
+
+    case BU2_NAME:
+
+      MU2.uiBUHeader = uiHeader;
+      MU2.uiBUReceivement = uiReceivement;
+      MU2.uiBUAvailable = uiAvailable;
+      MU2.uiBUKnowledge = uiKnowing;
+      MU2.uiBUTargetLocation = uiTargetLocation;
+
+    break;
+
+    case BU3_NAME:
+
+      MU3.uiBUHeader = uiHeader;
+      MU3.uiBUReceivement = uiReceivement;
+      MU3.uiBUAvailable = uiAvailable;
+      MU3.uiBUKnowledge = uiKnowing;
+      MU3.uiBUTargetLocation = uiTargetLocation;
+
+    break;
+  }
+}
