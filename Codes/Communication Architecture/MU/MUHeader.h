@@ -3,10 +3,13 @@
 #include <math.h>
 #include <string.h>
 
+
 /**************************************************/
 //#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
 
 
@@ -156,27 +159,20 @@
 #define MU3_TRANSMITTER         5
 #define MU3_RECEIVER            15
 
-#define BU1_TRANSMITTER         5
-#define BU1_RECEIVER            15
-
-#define BU2_TRANSMITTER         5
-#define BU2_RECEIVER            15
-
-#define BU3_TRANSMITTER         5
-#define BU3_RECEIVER            15
-
 /*************************************************/
 /*******************MOTOR PINS********************/
 
 /*************************************************/
 /*******************RFID PINS*********************/
 
+#define SS_PIN                  17
+#define RST_PIN                 27
 
 /*************************************************/
 /*******************STRUCTS*********************/
 
 
-typedef struct MU_MESSAGE_CREATE
+typedef struct MU_STRUCT
 {   
 
     unsigned int uiMUHeader;
@@ -185,9 +181,9 @@ typedef struct MU_MESSAGE_CREATE
     unsigned int uiMUCurrentLocation;
     unsigned int uiMUTargetLocation = NOT_FOUND;  
 
-}msgMU;
+}MU;
 
-typedef struct BU_MESSAGE_CREATE
+typedef struct BU_STRUCT
 {
     unsigned int uiBUHeader;
     unsigned int uiBUReceivement;
@@ -195,36 +191,22 @@ typedef struct BU_MESSAGE_CREATE
     unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
     unsigned int uiBUTargetLocation = NOT_FOUND;
 
-}msgBU;
-
-/**************************/
-
-typedef struct MU_INFORMATION
-{
-    unsigned int uiBUHeader;
-    unsigned int uiBUReceivement;
-    unsigned int uiBUAvailable;
-    unsigned int uiBUKnowledge;
-    unsigned int uiBUTargetLocation;
-
-}infoMU;
-
-typedef struct BU_INFORMATION
-{
-    
-    unsigned int uiMUHeader;
-    unsigned int uiMUReceivement;
-    unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
-    unsigned int uiMUCurrentLocation;
-    unsigned int uiMUTargetLocation = NOT_FOUND; 
-
-}infoBU;
+}BU;
 
 /*********************************/
 
-unsigned int createMUMessage(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
-unsigned int createBUMessage(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiAvailable, unsigned int uiKnowing, unsigned int uiTargetLocation);
+unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
+void parseMessageMU(unsigned int message); //MU parses the message coming from BU
 
-void parseMUMessage(unsigned int message); //BU parses the message coming from MU
-void parseBUMessage(unsigned int message); //MU parses the message coming from BU
+void sendMessageMU(void* ptr); //Message sent by MU
+void receiveMessageMU(void* ptr); //Message received by MU
+
+int checkAvailability(BU* bu);
+int checkDecode(unsigned int rawdata);
+int checkReceivement(BU* bu);
+
+void resetReceivementMU(MU* mu);
+void setReceivementMU(MU* mu);
+
+unsigned char readRFID(void);
 
