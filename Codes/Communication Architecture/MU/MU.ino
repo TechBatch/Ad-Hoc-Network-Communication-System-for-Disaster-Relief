@@ -4,6 +4,13 @@
 #define BU_ID   1
 
 
+/******RFID DECLARATIONS******/
+MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+MFRC522::MIFARE_Key key; 
+// Init array that will store new NUID 
+byte nuidPICC[4];
+
+/******COMMUNICATION INIT******/
 MU mu1;
 MU mu2;
 MU mu3;
@@ -20,6 +27,8 @@ BU1.uiMUHeader = BU1_NAME;
 BU2.uiMUHeader = BU2_NAME;
 BU3.uiMUHeader = BU3_NAME;
 
+unsigned int locTargetBU = UNKNOWN;
+unsigned int locTargetMU = UNKNOWN;
 
 SemaphoreHandle_t semReachTileMU;   //After reaching the communication tiles semaphore is taken
 SemaphoreHandle_t semStartComMU;    //If base is available semaphore is taken
@@ -29,10 +38,38 @@ SemaphoreHandle_t semEndComMU;      //When the acknowledgement is received, sema
 
 void setup() {
 
+  /******CREATE SEMAPHORES******/
   semReachTileMU = xSemaphoreCreateBinary(); //Initially empty
   semStartComMU = xSemaphoreCreateBinary(); //Initially empty
   semEndComMU = xSemaphoreCreateBinary();   //Initially empty
 
+  /*******RFID INITS***************/
+  Serial.begin(115200);
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522 
+
+  for (byte i = 0; i < 6; i++) {
+    key.keyByte[i] = 0xFF;
+  }
+
+  /****************COMMUNICATION***********************/
+  switch(MU_ID)
+  {
+    case 1: 
+      IrReceiver.begin(MU1_RECEIVER);
+      pinMode(MU1_TRANSMITTER, OUTPUT);
+    break;
+
+    case 2: 
+      IrReceiver.begin(MU2_RECEIVER);
+      pinMode(MU2_TRANSMITTER, OUTPUT);
+    break;
+
+    case 3: 
+      IrReceiver.begin(MU3_RECEIVER);
+      pinMode(MU3_TRANSMITTER, OUTPUT);
+    break;
+  }
 }
 
 void loop() {
@@ -40,7 +77,7 @@ void loop() {
 
 }
 
-
+/*********************COMMUNICATION FUNCTIONS*********************************/
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation)
 {
   unsigned int message;
@@ -109,7 +146,7 @@ void sendMessageMU(void* ptr) //Send Message task - Valid for each mobile unit
   unsigned int msg;
   unsigned short int address;
   unsigned char command;
-  xSemaphoreTake(semReachTileMU, portMAX_DELAY);    //Task waits here until the semaphore is given by RFID task (CAN BE CHANGED)
+  //xSemaphoreTake(semReachTileMU, portMAX_DELAY);    //Task waits here until the semaphore is given by RFID task (CAN BE CHANGED)
   xSemaphoreTake(semStartComMU, portMAX_DELAY);     //Task waits here until the base become available   
 
   switch(MU_ID)
@@ -204,7 +241,7 @@ void receiveMessageMU(void* ptr)
   }
   else
   {
-    if(checkDecode(IrReceiver.decodedIRData.decodedRawData))
+    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))
     {
       Serial.println("Message is lost. Wait for the new receivement.");
       IrReceiver.resume();
@@ -311,29 +348,35 @@ void receiveMessageMU(void* ptr)
   }
 }
 
-int checkAvailability(BU* bu)
+int checkAvailability(BU* bu) //Returns 1 if BU is available
 {
   return (bu->uiBUAvailable == BU_AVAILABLE);
 }
 
-int checkDecode(unsigned int rawdata)
+int checkDecode(unsigned int rawdata) //Checks the decode operation
 {
-  return ((rawdata && 0xFF000000) >> 24) != (~(rawdata && 0x000000FF));
+  return ((rawdata & 0xFF000000) >> 24) == (~(rawdata & 0x000000FF));
 }
 
-int checkReceivement(BU* bu, int i)
+int checkHeader(BU* bu, int i)  //Returns 1 for each BU header if the program and MU matches
 {
   switch(i)
   {
-    case 1:return (bu->uiHeader == BU1_NAME);
-    case 2:return (bu->uiHeader == BU2_NAME);
-    case 3:return (bu->uiHeader == BU3_NAME);
+    case 1:return (bu->uiBUHeader == BU1_NAME);
+    case 2:return (bu->uiBUHeader == BU2_NAME);
+    case 3:return (bu->uiBUHeader == BU3_NAME);
   }
 }
 
-int checkHeader(BU* bu)
+int checkReceivement(BU* bu)  //Returns 1 if BU received message from MU
 {
-  return (bu->uiReceivement == BU_MSG_RECEIVED)
+  return (bu->uiBUReceivement == BU_MSG_RECEIVED)
+}
+
+
+int checkKnowing(BU* bu)  //returns 1 if target known by BU
+{
+    return bu->uiBUKnowledge == BU_TARGET_KNOWN;
 }
 
 void resetReceivementMU(MU* mu) //resets receivement
@@ -345,3 +388,10 @@ void setReceivementMU(MU* mu) //sets receivement
 {
   mu->uiMUReceivement = MU_MSG_RECEIVED;
 }
+/************************RFID FUNCTIONS******************************/
+/*
+void readRFID(void* ptr)
+{
+
+}
+*/

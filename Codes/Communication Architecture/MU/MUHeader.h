@@ -54,7 +54,7 @@
 
 /*************************************************/
 /***********TILE IDS*************/
-#define NOT_FOUND   0x00
+#define UNKNOWN     0x00
 
 #define TILE_A1     0x01
 #define TILE_A2     0x02
@@ -204,9 +204,12 @@ void receiveMessageMU(void* ptr); //Message received by MU
 int checkAvailability(BU* bu);
 int checkDecode(unsigned int rawdata);
 int checkReceivement(BU* bu);
+int checkHeader(BU* bu, int i);
 
 void resetReceivementMU(MU* mu);
 void setReceivementMU(MU* mu);
 
-unsigned char readRFID(void);
+int checkKnowing(BU* bu);
+
+//void readRFID(void* ptr);
 

@@ -8,6 +8,8 @@
 //#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
 
 
@@ -52,7 +54,7 @@
 
 /*************************************************/
 /***********TILE IDS*************/
-#define NOT_FOUND   0x00
+#define UNKNOWN     0x00
 
 #define TILE_A1     0x01
 #define TILE_A2     0x02
