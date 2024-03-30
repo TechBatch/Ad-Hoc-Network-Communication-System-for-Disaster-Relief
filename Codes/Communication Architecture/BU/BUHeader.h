@@ -8,37 +8,50 @@
 //#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
-#include <SPI.h>
-#include <MFRC522.h>
+
+IRrecv IrReceiver1;
+IRrecv IrReceiver2;
+IRrecv IrReceiver3;
+IRrecv IrReceiver4;
+IRrecv IrReceiver5;
+IRrecv IrReceiver6;
+IRrecv IrReceiver7;
+IRrecv IrReceiver8;
+
+IRsend IrSender1;
+IRsend IrSender2;
+IRsend IrSender3;
+IRsend IrSender4;
+IRsend IrSender5;
+IRsend IrSender6;
+IRsend IrSender7;
+IRsend IrSender8;
 
 
 
 #define UINT8                   unsigned char
 #define UINT16                  unsigned short int
 #define UINT32                  unsigned int
-/*
- MU message holds data as 3 bytes -> 4-bit Header, 4-bit Finding Info, 1-byte Current Location, 1-byte Target Location
- BU message holds data as 3 bytes -> 4-bit Header, 4-bit Knowing Info, , 1-byte Target Location
-*/
+
 /*************************************************/
 /*******************HEADERS********************/
 
-#define BU1_NAME                0x1
-#define BU2_NAME                0x2
-#define BU3_NAME                0x3
+#define BU_NAME                 0x1
 
-#define MU1_NAME                0x4
-#define MU2_NAME                0x5
-#define MU3_NAME                0x6                 
+#define MU1_NAME                0x2
+#define MU2_NAME                0x3
+#define MU3_NAME                0x4                    
 
 /*************************************************/
 /*******************BASE MSGS********************/
 
-#define BU_MSG_RECEIVED         0x1
-#define BU_MSG_NOT_RECEIVED     0x2
+#define BU_MSG_RECEIVED_MU1     0x1
+#define BU_MSG_RECEIVED_MU2     0x2
+#define BU_MSG_RECEIVED_MU3     0x3
+#define BU_MSG_NOT_RECEIVED     0x0
 
-#define BU_BUSY                 0x2
-#define BU_AVAILABLE            0x1
+#define BU_IN                   0x1
+#define BU_OUT                  0x2
 
 #define BU_TARGET_KNOWN         0x1
 #define BU_TARGET_NOT_KNOWN     0x2
@@ -150,14 +163,29 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define BU1_TRANSMITTER         5
-#define BU1_RECEIVER            15
+#define BU1_TRANSMITTER         1
+#define BU1_RECEIVER            2
 
-#define BU2_TRANSMITTER         5
-#define BU2_RECEIVER            15
+#define BU2_TRANSMITTER         3
+#define BU2_RECEIVER            4
 
 #define BU3_TRANSMITTER         5
-#define BU3_RECEIVER            15
+#define BU3_RECEIVER            6
+
+#define BU4_TRANSMITTER         7
+#define BU4_RECEIVER            8
+
+#define BU5_TRANSMITTER         9
+#define BU5_RECEIVER            10
+
+#define BU6_TRANSMITTER         11
+#define BU6_RECEIVER            12
+
+#define BU7_TRANSMITTER         13
+#define BU7_RECEIVER            14
+
+#define BU8_TRANSMITTER         15
+#define BU8_RECEIVER            16
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -165,31 +193,40 @@
 
 typedef struct MU_STRUCT
 {   
-
-    unsigned int uiMUHeader;
-    unsigned int uiMUReceivement;
-    unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
-    unsigned int uiMUCurrentLocation;
-    unsigned int uiMUTargetLocation = NOT_FOUND;  
-
+  unsigned int uiMUHeader; //initial given
+  unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED; //No need
+  unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;   //Have to check
+  unsigned int uiMUCurrentLocation;                 //Needed for GUI
+  unsigned int uiMUTargetLocation = UNKNOWN;      //Have to check according to finding info
 }MU;
 
 typedef struct BU_STRUCT
 {
-    unsigned int uiBUHeader;
-    unsigned int uiBUReceivement;
-    unsigned int uiBUAvailable = BU_AVAILABLE;
-    unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
-    unsigned int uiBUTargetLocation = NOT_FOUND;
+  unsigned int uiBUHeader = BU_NAME;
+  unsigned int uiBUReceivement = BU_MSG_NOT_RECEIVED;
+  unsigned int uiBURange = BU_IN;
+  unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
+  unsigned int uiBUTargetLocation = UNKNOWN;
 
 }BU;
 
 /*********************************/
 
-unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiAvailable, unsigned int uiKnowing, unsigned int uiTargetLocation);
+unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiRange, unsigned int uiKnowing, unsigned int uiTargetLocation);
 void parseMessageBU(unsigned int message); //BU parses the message coming from MU
+
 void sendMessageBU(void* ptr); //Message sent by BU
-void receiveMessageBU(unsigned int message); //Message received by MU
+void receiveMessageBU(void* ptr); //Message received by BU
 
+unsigned int getHeader(unsigned int rawdata);
+int checkFinding(MU* mu);
+int checkDecode(unsigned int rawdata);
+int checkHeader(void);
 
+void resetReceivementBU(BU* bu);
+void setReceivementBU(BU* bu, unsigned int rcv);
 
+void setKnowledgeBU(BU* bu);
+void resetKnowledgeBU(BU* bu);
+
+void sayTargetLocation(BU* bu, MU* mu);

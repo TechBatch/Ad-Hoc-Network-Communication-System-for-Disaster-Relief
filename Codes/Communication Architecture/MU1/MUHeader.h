@@ -16,29 +16,26 @@
 #define UINT8                   unsigned char
 #define UINT16                  unsigned short int
 #define UINT32                  unsigned int
-/*
- MU message holds data as 3 bytes -> 4-bit Header, 4-bit Finding Info, 1-byte Current Location, 1-byte Target Location
- BU message holds data as 3 bytes -> 4-bit Header, 4-bit Knowing Info, , 1-byte Target Location
-*/
+
 /*************************************************/
 /*******************HEADERS********************/
 
-#define BU1_NAME                0x1
-#define BU2_NAME                0x2
-#define BU3_NAME                0x3
+#define BU_NAME                 0x1
 
-#define MU1_NAME                0x4
-#define MU2_NAME                0x5
-#define MU3_NAME                0x6                 
+#define MU1_NAME                0x2
+#define MU2_NAME                0x3
+#define MU3_NAME                0x4                 
 
 /*************************************************/
 /*******************BASE MSGS********************/
 
-#define BU_MSG_RECEIVED         0x1
-#define BU_MSG_NOT_RECEIVED     0x2
+#define BU_MSG_RECEIVED_MU1     0x1
+#define BU_MSG_RECEIVED_MU2     0x2
+#define BU_MSG_RECEIVED_MU3     0x3
+#define BU_MSG_NOT_RECEIVED     0x0
 
-#define BU_BUSY                 0x2
-#define BU_AVAILABLE            0x1
+#define BU_IN                   0x1
+#define BU_OUT                  0x2
 
 #define BU_TARGET_KNOWN         0x1
 #define BU_TARGET_NOT_KNOWN     0x2
@@ -150,14 +147,8 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU1_TRANSMITTER         5
-#define MU1_RECEIVER            15
-
-#define MU2_TRANSMITTER         5
-#define MU2_RECEIVER            15
-
-#define MU3_TRANSMITTER         5
-#define MU3_RECEIVER            15
+#define MU_TRANSMITTER         5
+#define MU_RECEIVER            15
 
 /*************************************************/
 /*******************MOTOR PINS********************/
@@ -174,24 +165,25 @@
 
 typedef struct MU_STRUCT
 {   
-
-    unsigned int uiMUHeader;
-    unsigned int uiMUReceivement;
-    unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
-    unsigned int uiMUCurrentLocation;
-    unsigned int uiMUTargetLocation = NOT_FOUND;  
+  unsigned int uiMUHeader = MU1_NAME;
+  unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
+  unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
+  unsigned int uiMUCurrentLocation;
+  unsigned int uiMUTargetLocation = UNKNOWN;  
 
 }MU;
 
 typedef struct BU_STRUCT
 {
-    unsigned int uiBUHeader;
-    unsigned int uiBUReceivement;
-    unsigned int uiBUAvailable = BU_AVAILABLE;
-    unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
-    unsigned int uiBUTargetLocation = NOT_FOUND;
+  unsigned int uiBUHeader = BU_NAME;
+  unsigned int uiBUReceivement = BU_MSG_NOT_RECEIVED;
+  unsigned int uiBURange = BU_OUT;
+  unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
+  unsigned int uiBUTargetLocation = UNKNOWN;
 
 }BU;
+
+
 
 /*********************************/
 
@@ -201,15 +193,16 @@ void parseMessageMU(unsigned int message); //MU parses the message coming from B
 void sendMessageMU(void* ptr); //Message sent by MU
 void receiveMessageMU(void* ptr); //Message received by MU
 
-int checkAvailability(BU* bu);
+int checkRange(BU* bu);
 int checkDecode(unsigned int rawdata);
 int checkReceivement(BU* bu);
-int checkHeader(BU* bu, int i);
+int checkHeader(BU* bu);
 
 void resetReceivementMU(MU* mu);
 void setReceivementMU(MU* mu);
 
-int checkKnowing(BU* bu);
+void resetBURange(BU* bu);
+int checkKnowledge(BU* bu);
 
-//void readRFID(void* ptr);
+void readRFID(void* ptr);
 
