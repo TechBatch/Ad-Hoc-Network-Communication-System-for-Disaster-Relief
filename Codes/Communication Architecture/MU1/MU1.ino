@@ -363,6 +363,11 @@ int encodeRFID(byte *buffer) {
     return 8;
   }
 
+  else if(buffer[0] == 195 && buffer[1] == 203 && buffer[2] == 15 && buffer[3] == 37) {
+    //Serial.println("A9");
+    return 9;
+  }
+
   else if(buffer[0] == 35 && buffer[1] == 201 && buffer[2] == 0 && buffer[3] == 29) {
     //Serial.println("B1");
     return 11;
@@ -401,6 +406,11 @@ int encodeRFID(byte *buffer) {
   else if(buffer[0] == 51 && buffer[1] == 145 && buffer[2] == 244 && buffer[3] == 36) {
     //Serial.println("B8");
     return 18;
+  }
+
+  else if(buffer[0] == 115 && buffer[1] == 246 && buffer[2] == 155 && buffer[3] == 236) {
+    //Serial.println("B9");
+    return 19;
   }
 
   else if(buffer[0] == 99 && buffer[1] == 32 && buffer[2] == 6 && buffer[3] == 37) {
@@ -443,6 +453,11 @@ int encodeRFID(byte *buffer) {
     return 28;
   }
 
+  else if(buffer[0] == 115 && buffer[1] == 64 && buffer[2] == 1 && buffer[3] == 37) {
+    //Serial.println("C9");
+    return 29;
+  }
+
   else if(buffer[0] == 179 && buffer[1] == 142 && buffer[2] == 6 && buffer[3] == 37) {
     //Serial.println("D1");
     return 31;
@@ -481,6 +496,11 @@ int encodeRFID(byte *buffer) {
   else if(buffer[0] == 67 && buffer[1] == 41 && buffer[2] == 255 && buffer[3] == 36) {
    // Serial.println("D8");
     return 38;
+  }
+
+  else if(buffer[0] == 35 && buffer[1] == 244 && buffer[2] == 149 && buffer[3] == 17) {
+    //Serial.println("D9");
+    return 39;
   }
 
   else if(buffer[0] == 179 && buffer[1] == 213 && buffer[2] == 244 && buffer[3] == 36) {
@@ -523,6 +543,11 @@ int encodeRFID(byte *buffer) {
     return 48;
   }
 
+  else if(buffer[0] == 163 && buffer[1] == 188 && buffer[2] == 193 && buffer[3] == 17) {
+    //Serial.println("E9");
+    return 49;
+  }
+
   else if(buffer[0] == 211 && buffer[1] == 27 && buffer[2] == 249 && buffer[3] == 36) {
     //Serial.println("F1");
     return 51;
@@ -561,6 +586,11 @@ int encodeRFID(byte *buffer) {
   else if(buffer[0] == 195 && buffer[1] == 96 && buffer[2] == 16 && buffer[3] == 37) {
     //Serial.println("F8");
     return 58;
+  }
+
+  else if(buffer[0] == 227 && buffer[1] == 170 && buffer[2] == 139 && buffer[3] == 17) {
+    //Serial.println("F9");
+    return 59;
   }
 
   else if(buffer[0] == 243 && buffer[1] == 84 && buffer[2] == 245 && buffer[3] == 36) {
@@ -603,7 +633,12 @@ int encodeRFID(byte *buffer) {
     return 68;
   }
 
-    else if(buffer[0] == 131 && buffer[1] == 76 && buffer[2] == 153 && buffer[3] == 236) {
+  else if(buffer[0] == 67 && buffer[1] == 138 && buffer[2] == 14 && buffer[3] == 37) {
+    //Serial.println("G9");
+    return 69;
+  }
+    
+  else if(buffer[0] == 131 && buffer[1] == 76 && buffer[2] == 153 && buffer[3] == 236) {
     //Serial.println("H1");
     return 71;
   } 
@@ -642,6 +677,57 @@ int encodeRFID(byte *buffer) {
     //Serial.println("H8");
     return 78;
   }
+
+  else if(buffer[0] == 51 && buffer[1] == 200 && buffer[2] == 6 && buffer[3] == 253) {
+    //Serial.println("H9");
+    return 79;
+  }
+
+  else if(buffer[0] == 3 && buffer[1] == 255 && buffer[2] == 247 && buffer[3] == 36) {
+    //Serial.println("I1");
+    return 81;
+  } 
+
+  else if(buffer[0] == 51 && buffer[1] == 254 && buffer[2] == 248 && buffer[3] == 36) {
+    //Serial.println("I2");
+    return 82;
+  }
+
+  else if(buffer[0] == 163 && buffer[1] == 239 && buffer[2] == 149 && buffer[3] == 17) {
+    //Serial.println("I3");
+    return 83;
+  }
+
+  else if(buffer[0] == 195 && buffer[1] == 28 && buffer[2] == 232 && buffer[3] == 17) {
+    //Serial.println("I4");
+    return 84;
+  }
+
+  else if(buffer[0] == 99 && buffer[1] == 51 && buffer[2] == 249 && buffer[3] == 36) {
+    //Serial.println("I5");
+    return 85;
+  }
+
+  else if(buffer[0] == 211 && buffer[1] == 74 && buffer[2] == 202 && buffer[3] == 17) {
+    //Serial.println("I6");
+    return 86;
+  }
+
+    else if(buffer[0] == 35 && buffer[1] == 59 && buffer[2] == 169 && buffer[3] == 18) {
+    //Serial.println("I7");
+    return 87;
+  }
+
+  else if(buffer[0] == 99 && buffer[1] == 209 && buffer[2] == 173 && buffer[3] == 17) {
+    //Serial.println("I8");
+    return 88;
+  }
+
+  else if(buffer[0] == 3 && buffer[1] == 204 && buffer[2] == 21 && buffer[3] == 17) {
+    //Serial.println("I9");
+    return 89;
+  }
+
   else {
     //Serial.println("Unknown");
     return 0;
