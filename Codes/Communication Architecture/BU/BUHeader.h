@@ -163,29 +163,29 @@ IRsend IrSender8;
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define BU1_TRANSMITTER         1
-#define BU1_RECEIVER            2
+#define BU1_TRANSMITTER         33
+#define BU1_RECEIVER            15
 
-#define BU2_TRANSMITTER         3
+#define BU2_TRANSMITTER         18
 #define BU2_RECEIVER            4
 
-#define BU3_TRANSMITTER         5
-#define BU3_RECEIVER            6
+#define BU3_TRANSMITTER         22
+#define BU3_RECEIVER            13
 
-#define BU4_TRANSMITTER         7
-#define BU4_RECEIVER            8
+#define BU4_TRANSMITTER         23
+#define BU4_RECEIVER            12
 
-#define BU5_TRANSMITTER         9
-#define BU5_RECEIVER            10
+#define BU5_TRANSMITTER         21
+#define BU5_RECEIVER            14
 
-#define BU6_TRANSMITTER         11
-#define BU6_RECEIVER            12
+#define BU6_TRANSMITTER         19
+#define BU6_RECEIVER            27
 
-#define BU7_TRANSMITTER         13
-#define BU7_RECEIVER            14
+#define BU7_TRANSMITTER         35
+#define BU7_RECEIVER            26
 
-#define BU8_TRANSMITTER         15
-#define BU8_RECEIVER            16
+#define BU8_TRANSMITTER         34
+#define BU8_RECEIVER            25
 
 /*************************************************/
 /*******************STRUCTS*********************/
