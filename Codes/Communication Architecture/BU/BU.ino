@@ -100,772 +100,746 @@ void loop() {
 
 void sendMessageBU(void* ptr) //BU continously send message that it has
 {
-  unsigned int msg;
-  unsigned short int address;
-  unsigned char command;
+  while(1)
+  {
+    unsigned int msg;
+    unsigned short int address;
+    unsigned char command;
 
-  msg = createMessageBU(bu.uiBUHeader, bu.uiBUReceivement, bu.uiBURange, bu.uiBUKnowledge, bu.uiBUTargetLocation);
-  address = (unsigned short int)((msg & 0x00FFFF00) >> 8);
-  command = (unsigned char)(msg & 0x000000FF);
+    msg = createMessageBU(bu.uiBUHeader, bu.uiBUReceivement, bu.uiBURange, bu.uiBUKnowledge, bu.uiBUTargetLocation);
+    address = (unsigned short int)((msg & 0x00FFFF00) >> 8);
+    command = (unsigned char)(msg & 0x000000FF);
 
-  Serial.print("Message from BU is ready : ");
-  Serial.println(msg, HEX);
+    Serial.print("Message from BU is ready : ");
+    Serial.println(msg, HEX);
 
-  IrSender1.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-  IrSender2.sendNEC(address,command,0); 
-  IrSender3.sendNEC(address,command,0); 
-  IrSender4.sendNEC(address,command,0); 
-  IrSender5.sendNEC(address,command,0); 
-  IrSender6.sendNEC(address,command,0); 
-  IrSender7.sendNEC(address,command,0); 
-  IrSender8.sendNEC(address,command,0);
+    IrSender1.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
+    IrSender2.sendNEC(address,command,0); 
+    IrSender3.sendNEC(address,command,0); 
+    IrSender4.sendNEC(address,command,0); 
+    IrSender5.sendNEC(address,command,0); 
+    IrSender6.sendNEC(address,command,0); 
+    IrSender7.sendNEC(address,command,0); 
+    IrSender8.sendNEC(address,command,0);
 
-  resetReceivementBU(&bu);                          //Reset the receivement after sending the message
+    resetReceivementBU(&bu);                          //Reset the receivement after sending the message
 
-  Serial.print("Message from BU is sent: ");
-  Serial.println(msg, HEX); 
+    Serial.print("Message from BU is sent: ");
+    Serial.println(msg, HEX);
+  } 
 }
 
 void receiveMessageBU(void* ptr)
 {
   int area = *((int*)ptr);
-  switch(area) //Activate according to task index
+  while(1)
   {
-    case 1:
-      IrReceiver1.decodeNEC(); 
-      if(IrReceiver1.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver1.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver1.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+    switch(area) //Activate according to task index
+    {
+      case 1:
+        IrReceiver1.decodeNEC(); 
+        if(IrReceiver1.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver1.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver1.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver1.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver1.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver1.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver1.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver1.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver1.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver1.resume();
             }
-            IrReceiver1.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver1.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver1.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 2:
-      IrReceiver2.decodeNEC(); 
-      if(IrReceiver2.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver2.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver2.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 2:
+        IrReceiver2.decodeNEC(); 
+        if(IrReceiver2.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver2.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver2.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver2.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver2.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver2.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver2.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver2.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver2.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver2.resume();
             }
-            IrReceiver2.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver2.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver2.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 3:
-      IrReceiver3.decodeNEC(); 
-      if(IrReceiver3.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver3.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver3.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 3:
+        IrReceiver3.decodeNEC(); 
+        if(IrReceiver3.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver3.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver3.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver3.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver3.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver3.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver3.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver3.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver3.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver3.resume();
             }
-            IrReceiver3.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver3.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver3.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 4:
-      IrReceiver4.decodeNEC(); 
-      if(IrReceiver4.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver4.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver4.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 4:
+        IrReceiver4.decodeNEC(); 
+        if(IrReceiver4.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver4.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver4.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver4.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver4.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver4.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver4.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver4.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver4.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver4.resume();
             }
-            IrReceiver4.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver4.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver4.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 5:
-      IrReceiver5.decodeNEC(); 
-      if(IrReceiver5.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver5.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver5.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 5:
+        IrReceiver5.decodeNEC(); 
+        if(IrReceiver5.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver5.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver5.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver5.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver5.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver5.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver5.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver5.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver5.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver5.resume();
             }
-            IrReceiver5.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver5.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver5.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 6:
-      IrReceiver6.decodeNEC(); 
-      if(IrReceiver6.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver6.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver6.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 6:
+        IrReceiver6.decodeNEC(); 
+        if(IrReceiver6.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver6.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver6.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver6.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver6.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver6.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver6.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver6.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver6.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver6.resume();
             }
-            IrReceiver6.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver6.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver6.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 7:
-      IrReceiver7.decodeNEC(); 
-      if(IrReceiver7.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver7.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver7.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 7:
+        IrReceiver7.decodeNEC(); 
+        if(IrReceiver7.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver7.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver7.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver7.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver7.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver7.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver7.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver7.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver7.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver7.resume();
             }
-            IrReceiver7.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver7.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver7.resume();
+            }
           }
         }
-      }
-    break;
+      break;
 
-    case 8:
-      IrReceiver8.decodeNEC(); 
-      if(IrReceiver8.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
-      {
-        Serial.println("Decoding fails. Protocol is wrong");
-        IrReceiver8.resume();
-        return;
-      }
-      else
-      {
-        if(!checkDecode(IrReceiver8.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      case 8:
+        IrReceiver8.decodeNEC(); 
+        if(IrReceiver8.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
         {
-          Serial.println("Message is lost. Wait for the new receivement.");
+          Serial.println("Decoding fails. Protocol is wrong");
           IrReceiver8.resume();
-          return;
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver8.decodedIRData.decodedRawData, HEX);
-          parseMessageBU(IrReceiver8.decodedIRData.decodedRawData);  //Parse the message
-          if(!checkHeader())                                     //Check the header if wrong resume and return
+          if(!checkDecode(IrReceiver8.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
           {
-            Serial.println("Message did not come from any MU");
+            Serial.println("Message is lost. Wait for the new receivement.");
             IrReceiver8.resume();
-            return;
           }
           else
           {
-            switch(getHeader(IrReceiver8.decodedIRData.decodedRawData))
+            Serial.print("Message is decoded: ");
+            Serial.println(IrReceiver8.decodedIRData.decodedRawData, HEX);
+            parseMessageBU(IrReceiver8.decodedIRData.decodedRawData);  //Parse the message
+            if(!checkHeader())                                     //Check the header if wrong resume and return
             {
-              case 2: //MU1
-                Serial.println("Message is received from MU1");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
-                currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
-                {
-                  Serial.println("MU1 does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU1 knows the target location: ");
-                  Serial.println(mu1.uiMUTargetLocation, HEX);
-              
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu1);
-                }
-              break;
-
-              case 3: //MU2
-                Serial.println("Message is received from MU2");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
-                currentLoc2 = mu2.uiMUCurrentLocation;
-                if(!checkFinding(&mu2))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU2 knows the target location: ");
-                  Serial.println(mu2.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu2);
-                }
-              break;
-
-              case 4: //MU3
-                Serial.println("Message is received from MU3");
-                setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
-                currentLoc3 = mu3.uiMUCurrentLocation;
-                if(!checkFinding(&mu3))
-                {
-                  Serial.println("MU does not know the location of target");
-                }
-                else
-                {
-                  Serial.print("MU3 knows the target location: ");
-                  Serial.println(mu3.uiMUTargetLocation, HEX);
-                  
-                  setKnowledgeBU(&bu);
-                  sayTargetLocation(&bu, &mu3);
-                }
-              break;
+              Serial.println("Message did not come from any MU");
+              IrReceiver8.resume();
             }
-            IrReceiver8.resume();
-            return;
+            else
+            {
+              switch(getHeader(IrReceiver8.decodedIRData.decodedRawData))
+              {
+                case 2: //MU1
+                  Serial.println("Message is received from MU1");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU1);
+                  currentLoc1 = mu1.uiMUCurrentLocation;
+                  if(!checkFinding(&mu1))
+                  {
+                    Serial.println("MU1 does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU1 knows the target location: ");
+                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu1);
+                  }
+                break;
+
+                case 3: //MU2
+                  Serial.println("Message is received from MU2");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU2);
+                  currentLoc2 = mu2.uiMUCurrentLocation;
+                  if(!checkFinding(&mu2))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu2);
+                  }
+                break;
+
+                case 4: //MU3
+                  Serial.println("Message is received from MU3");
+                  setReceivementBU(&bu, BU_MSG_RECEIVED_MU3);
+                  currentLoc3 = mu3.uiMUCurrentLocation;
+                  if(!checkFinding(&mu3))
+                  {
+                    Serial.println("MU does not know the location of target");
+                  }
+                  else
+                  {
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
+                    
+                    setKnowledgeBU(&bu);
+                    sayTargetLocation(&bu, &mu3);
+                  }
+                break;
+              }
+              IrReceiver8.resume();
+            }
           }
         }
-      }
-    break;
+      break;
+    }
   }
 }
 /*****************************************************************************
