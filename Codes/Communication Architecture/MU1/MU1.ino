@@ -78,43 +78,46 @@ void loop() {
 ******************************************************************************/
 void sendMessageMU(void* ptr) 
 {
-  unsigned int msg;
-  unsigned short int address;
-  unsigned char command;
-  
-  xSemaphoreGive(semWaitReceiveMU);                  //This semaphore is used to prevent that semEndSendMU becomes overgiven
-  xSemaphoreTake(semStartSendMU, portMAX_DELAY);     //Task waits here until the base become available   
-  
-  setReceivementMU(&mu);
-  msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
-  address = (unsigned short int)((msg & 0x00FFFF00) >> 8);
-  command = (unsigned char)(msg & 0x000000FF); 
-  
-  Serial.print("Message from MU is ready : ");
-  Serial.println(msg, HEX);
-
-  digitalWriteFast(MU_TRANSMITTER, HIGH);               //Transmitter is open.
-  IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-  
-  resetReceivementMU(&mu);
-  
-  Serial.print("Message from MU is sent: ");
-  Serial.println(msg, HEX);
-
-  if(xSemaphoreTake(semEndSendMU, 50) == pdTRUE)    //Wait 50 msec, if sem is not given by the receiver, skip the if block
+  while(1)
   {
-    IrSender.IRLedOff();
-    //digitalWriteFast(MU_TRANSMITTER, LOW);              //Transmitter is closed
-    Serial.println("MU transmitter is closed");
+    unsigned int msg;
+    unsigned short int address;
+    unsigned char command;
     
-    resetBURange(&bu);
-    resetReceivementMU(&mu);                        //Reset the receivement information in the MU struct
+    xSemaphoreGive(semWaitReceiveMU);                  //This semaphore is used to prevent that semEndSendMU becomes overgiven
+    xSemaphoreTake(semStartSendMU, portMAX_DELAY);     //Task waits here until the base become available   
+    
+    setReceivementMU(&mu);
+    msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
+    address = (unsigned short int)((msg & 0x00FFFF00) >> 8);
+    command = (unsigned char)(msg & 0x000000FF); 
+    
+    Serial.print("Message from MU is ready : ");
+    Serial.println(msg, HEX);
 
-    Serial.print("ACK message from MU is sent: ");
-    Serial.println(mu.uiMUReceivement, HEX);        
+    digitalWriteFast(MU_TRANSMITTER, HIGH);               //Transmitter is open.
+    IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
+    
+    resetReceivementMU(&mu);
+    
+    Serial.print("Message from MU is sent: ");
+    Serial.println(msg, HEX);
+
+    if(xSemaphoreTake(semEndSendMU, 50) == pdTRUE)    //Wait 50 msec, if sem is not given by the receiver, skip the if block
+    {
+      IrSender.IRLedOff();
+      //digitalWriteFast(MU_TRANSMITTER, LOW);              //Transmitter is closed
+      Serial.println("MU transmitter is closed");
+      
+      resetBURange(&bu);
+      resetReceivementMU(&mu);                        //Reset the receivement information in the MU struct
+
+      Serial.print("ACK message from MU is sent: ");
+      Serial.println(mu.uiMUReceivement, HEX);        
+    }
+    IrSender.IRLedOff();
+    //digitalWriteFast(MU_TRANSMITTER, LOW);                //Transmitter is closed
   }
-  IrSender.IRLedOff();
-  //digitalWriteFast(MU_TRANSMITTER, LOW);                //Transmitter is closed
 }
 
 
@@ -124,63 +127,61 @@ void sendMessageMU(void* ptr)
 ******************************************************************************/
 void receiveMessageMU(void* ptr)
 {
-  IrReceiver.decodeNEC(); 
-  if(IrReceiver.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
+  while(1)
   {
-    Serial.println("Decoding fails. Protocol is wrong");
-    IrReceiver.resume();
-    return;
-  }
-  else
-  {
-    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+    IrReceiver.decodeNEC(); 
+    if(IrReceiver.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
     {
-      Serial.println("Message is lost. Wait for the new receivement.");
+      Serial.println("Decoding fails. Protocol is wrong");
       IrReceiver.resume();
-      return;
     }
     else
     {
-      Serial.print("Message is decoded: ");
-      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-      parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-      if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
+      if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
       {
-        Serial.println("Message did not come from BU");
+        Serial.println("Message is lost. Wait for the new receivement.");
         IrReceiver.resume();
-        return;
       }
       else
       {
-        if(!checkRange(&bu))      //BU always signals IN. Initially BU struct is OUT, if the first message comes from the BU skip this block otherwise resume and return
+        Serial.print("Message is decoded: ");
+        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+        parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+        if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
         {
-          Serial.println("Not in proper range.");
+          Serial.println("Message did not come from BU");
           IrReceiver.resume();
-          return;
         }
         else
         {
-          if(checkReceivement(&bu, &mu))   //If the message that is sent from MU to BU is received by BU give semEndSendMU to end the Communication and close the transmitter of the MU
+          if(!checkRange(&bu))      //BU always signals IN. Initially BU struct is OUT, if the first message comes from the BU skip this block otherwise resume and return
           {
-            Serial.println("ACK Message and information are received from BU.");
-            setReceivementMU(&mu);   //Set the receivement info of MU
-            xSemaphoreGive(semEndSendMU);
-            if(!checkKnowledge(&bu))
-            {
-              Serial.println("Target location is not known by the BU.");
-            }
-            else
-            {
-              locTargetBU = bu.uiBUTargetLocation;
-            }
+            Serial.println("Not in proper range.");
+            IrReceiver.resume();
           }
           else
           {
-            xSemaphoreTake(semWaitReceiveMU, portMAX_DELAY);  //Wait forever until the semaphore is given by sending task. It is used for preventing the semaphore below becomes overgiven
-            xSemaphoreGive(semStartSendMU); //When this semaphore is given, sending task starts.
+            if(checkReceivement(&bu, &mu))   //If the message that is sent from MU to BU is received by BU give semEndSendMU to end the Communication and close the transmitter of the MU
+            {
+              Serial.println("ACK Message and information are received from BU.");
+              setReceivementMU(&mu);   //Set the receivement info of MU
+              xSemaphoreGive(semEndSendMU);
+              if(!checkKnowledge(&bu))
+              {
+                Serial.println("Target location is not known by the BU.");
+              }
+              else
+              {
+                locTargetBU = bu.uiBUTargetLocation;
+              }
+            }
+            else
+            {
+              xSemaphoreTake(semWaitReceiveMU, portMAX_DELAY);  //Wait forever until the semaphore is given by sending task. It is used for preventing the semaphore below becomes overgiven
+              xSemaphoreGive(semStartSendMU); //When this semaphore is given, sending task starts.
+            }
+            IrReceiver.resume();
           }
-          IrReceiver.resume();
-          return;
         }
       }
     }
@@ -303,22 +304,23 @@ int checkKnowledge(BU* bu)
 
 void readRFID(void* ptr)
 {
-  
-  // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-  if (!rfid.PICC_IsNewCardPresent()) 
+  while(1)
   {
-    mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
+    // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+    if (!rfid.PICC_IsNewCardPresent()) 
+    {
+      mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
+    }
+    // Verify if the NUID has been readed
+    if ( !rfid.PICC_ReadCardSerial()) {
+    }
+    // Store NUID into nuidPICC array
+    for (byte i = 0; i < 4; i++) {
+      nuidPICC[i] = rfid.uid.uidByte[i];
+    }
+    // Stop encryption on PCD
+    rfid.PCD_StopCrypto1();
   }
-  // Verify if the NUID has been readed
-  if ( !rfid.PICC_ReadCardSerial()) {
-    return;
-  }
-  // Store NUID into nuidPICC array
-  for (byte i = 0; i < 4; i++) {
-    nuidPICC[i] = rfid.uid.uidByte[i];
-  }
-  // Stop encryption on PCD
-  rfid.PCD_StopCrypto1();
 }
 
 int encodeRFID(byte *buffer) {
