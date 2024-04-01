@@ -9,26 +9,6 @@
 #include <IRremote.hpp>
 #include <Arduino.h>
 
-IRrecv IrReceiver1;
-IRrecv IrReceiver2;
-IRrecv IrReceiver3;
-IRrecv IrReceiver4;
-IRrecv IrReceiver5;
-IRrecv IrReceiver6;
-IRrecv IrReceiver7;
-IRrecv IrReceiver8;
-
-IRsend IrSender1;
-IRsend IrSender2;
-IRsend IrSender3;
-IRsend IrSender4;
-IRsend IrSender5;
-IRsend IrSender6;
-IRsend IrSender7;
-IRsend IrSender8;
-
-
-
 #define UINT8                   unsigned char
 #define UINT16                  unsigned short int
 #define UINT32                  unsigned int
@@ -68,6 +48,7 @@ IRsend IrSender8;
 /*************************************************/
 /***********TILE IDS*************/
 #define UNKNOWN     0x00
+#define TARGET      0x64
 
 #define TILE_A1     0x01
 #define TILE_A2     0x02
@@ -163,29 +144,17 @@ IRsend IrSender8;
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define BU1_TRANSMITTER         33
-#define BU1_RECEIVER            15
+#define BU_TRANSMITTER         33
+#define BU_RECEIVER            26
 
-#define BU2_TRANSMITTER         18
-#define BU2_RECEIVER            4
 
-#define BU3_TRANSMITTER         22
-#define BU3_RECEIVER            13
 
-#define BU4_TRANSMITTER         23
-#define BU4_RECEIVER            12
-
-#define BU5_TRANSMITTER         21
-#define BU5_RECEIVER            14
-
-#define BU6_TRANSMITTER         19
-#define BU6_RECEIVER            27
-
-#define BU7_TRANSMITTER         35
-#define BU7_RECEIVER            26
-
-#define BU8_TRANSMITTER         34
-#define BU8_RECEIVER            25
+/*************************************************/
+/***************STEP PINS****************/
+#define IN1 19 //Motor
+#define IN2 18 //Sürücü
+#define IN3 5 //Pin
+#define IN4 17  //Bağlantıları
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -215,18 +184,18 @@ typedef struct BU_STRUCT
 unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiRange, unsigned int uiKnowing, unsigned int uiTargetLocation);
 void parseMessageBU(unsigned int message); //BU parses the message coming from MU
 
-void sendMessageBU(void* ptr); //Message sent by BU
-void receiveMessageBU(void* ptr); //Message received by BU
+void sendMessageBU(void); //Message sent by BU
+void receiveMessageBU(void); //Message received by BU
 
 unsigned int getHeader(unsigned int rawdata);
 int checkFinding(MU* mu);
 int checkDecode(unsigned int rawdata);
 int checkHeader(void);
 
-void resetReceivementBU(BU* bu);
-void setReceivementBU(BU* bu, unsigned int rcv);
-
 void setKnowledgeBU(BU* bu);
 void resetKnowledgeBU(BU* bu);
 
 void sayTargetLocation(BU* bu, MU* mu);
+
+void taskMotorControl(void *pvParameters);
+void controlMotor(int steps);

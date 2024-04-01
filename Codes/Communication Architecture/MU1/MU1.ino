@@ -1,5 +1,7 @@
 #include "MUHeader.h"
 
+//MU HAS 2 BIT INFO SPACE AS RECEIVEMENT IT IS NOT USE
+
 /******RFID DECLARATIONS******/
 
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
@@ -16,23 +18,12 @@ BU bu;
 unsigned int locTargetBU = UNKNOWN; //Said by BU
 unsigned int locTargetMU = UNKNOWN; //Found by MU
 
-SemaphoreHandle_t semStartSendMU;    //Starts the sending message when it is taken
-SemaphoreHandle_t semEndSendMU;      //Stops the sending message when it is taken
-SemaphoreHandle_t semWaitReceiveMU;     //Stops the receivement when it is taken
 
-BaseType_t taskID;
-
- 
-
+int sure = 2000;
+unsigned long timee = 0;
 void setup() {
 
   Serial.begin(115200);
-
-  /******CREATE SEMAPHORES******/
-  //semReachTileMU = xSemaphoreCreateBinary(); //Initially empty
-  semStartSendMU = xSemaphoreCreateBinary(); //Initially empty
-  semEndSendMU = xSemaphoreCreateBinary();   //Initially empty
-  semWaitReceiveMU = xSemaphoreCreateBinary();   //Initially empty
 
   /*******RFID INITS***************/
   
@@ -42,31 +33,35 @@ void setup() {
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;
   }
-
+  
   /****************COMMUNICATION***********************/
   IrReceiver.begin(MU_RECEIVER);
   pinMode(MU_TRANSMITTER, OUTPUT);
   IrSender.begin(MU_TRANSMITTER);
 
-  /********************TASK CREATIONS******************/
-  if((taskID = xTaskCreate(receiveMessageMU, "IR Receive", 2048, NULL, tskIDLE_PRIORITY, NULL)) != pdPASS)
-  {
-    Serial.println("Task MU: IR Receive creation is failed.");
-  }
+  /******************STEP MOTOR***********************/
+  pinMode(IN1, OUTPUT); //Pinleri
+  pinMode(IN2, OUTPUT); //Çıkış
+  pinMode(IN3, OUTPUT); //Olarak
+  pinMode(IN4, OUTPUT); //Tanımladık
 
-  if((taskID = xTaskCreate(sendMessageMU, "IR Send", 2048, NULL, tskIDLE_PRIORITY, NULL)) != pdPASS)
-  {
-    Serial.println("Task MU: IR Send creation is failed.");
-  }
+  // Create FreeRTOS task
+  xTaskCreatePinnedToCore(
+    taskMotorControl,     // Task function
+    "MotorControlTask",   // Task name
+    2048,                // Stack size (in words)
+    NULL,                 // Task input parameter
+    1,                    // Priority
+    NULL,                 // Task handle
+    0                     // Core to run the task (0 or 1)
+  );
 
-  if((taskID = xTaskCreate(readRFID, "ReadRFID", 2048, NULL, tskIDLE_PRIORITY, NULL)) != pdPASS)
-  {
-    Serial.println("Task MU: Read RFID creation is failed.");
-  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  readRFID();
+  receiveMessageMU();
+  sendMessageMU();
 
 }
 
@@ -74,115 +69,71 @@ void loop() {
 
 /*****************************************************************************
 * Function: sendMessageMU(void* ptr)
-* Aim:  First task of the MUs. Sends the messages continously if they are in range, otherwise transmitter is closed.
+* Aim:  First function of the MUs. Sends the messages continously if they are in range, otherwise transmitter is closed.
 ******************************************************************************/
-void sendMessageMU(void* ptr) 
+void sendMessageMU(void) 
 {
-  while(1)
-  {
     unsigned int msg;
     unsigned short int address;
     unsigned char command;
-    
-    xSemaphoreGive(semWaitReceiveMU);                  //This semaphore is used to prevent that semEndSendMU becomes overgiven
-    xSemaphoreTake(semStartSendMU, portMAX_DELAY);     //Task waits here until the base become available   
-    
-    setReceivementMU(&mu);
+  
     msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
-    address = (unsigned short int)((msg & 0x00FFFF00) >> 8);
-    command = (unsigned char)(msg & 0x000000FF); 
-    
-    Serial.print("Message from MU is ready : ");
-    Serial.println(msg, HEX);
+    command = (unsigned int)((msg & 0x00FF0000) >> 16);
+    address = (unsigned int)(msg & 0x0000FFFF);
+    /*address = 0x1111;
+    command = 0x31;*/
 
-    digitalWriteFast(MU_TRANSMITTER, HIGH);               //Transmitter is open.
-    IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-    
-    resetReceivementMU(&mu);
-    
-    Serial.print("Message from MU is sent: ");
-    Serial.println(msg, HEX);
-
-    if(xSemaphoreTake(semEndSendMU, 50) == pdTRUE)    //Wait 50 msec, if sem is not given by the receiver, skip the if block
-    {
-      IrSender.IRLedOff();
-      //digitalWriteFast(MU_TRANSMITTER, LOW);              //Transmitter is closed
-      Serial.println("MU transmitter is closed");
-      
-      resetBURange(&bu);
-      resetReceivementMU(&mu);                        //Reset the receivement information in the MU struct
-
-      Serial.print("ACK message from MU is sent: ");
-      Serial.println(mu.uiMUReceivement, HEX);        
-    }
-    IrSender.IRLedOff();
-    //digitalWriteFast(MU_TRANSMITTER, LOW);                //Transmitter is closed
-  }
+    //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
+    IrSender.sendNEC(address, command, 0);
+    delay(10);
 }
-
 
 /*****************************************************************************
 * Function: receiveMessageMU(void* ptr)
 * Aim: Second task of the MU. Continuosly arrange the receive operation of the IR communication
 ******************************************************************************/
-void receiveMessageMU(void* ptr)
+void receiveMessageMU(void)
 {
-  while(1)
+  if(!IrReceiver.decodeNEC())
   {
-    IrReceiver.decodeNEC(); 
-    if(IrReceiver.decodedIRData.protocol != NEC)  //If the message protocol is not NEC resume and return
+    IrReceiver.resume();
+    return;
+  }
+  else
+  {
+  
+    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+
+    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
     {
-      Serial.println("Decoding fails. Protocol is wrong");
+      Serial.println("Message is lost. Wait for the new receivement.");
       IrReceiver.resume();
+      return;
     }
     else
     {
-      if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      Serial.print("Message is decoded: ");
+      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+      parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+      if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
       {
-        Serial.println("Message is lost. Wait for the new receivement.");
+        Serial.println("Message did not come from BU");
         IrReceiver.resume();
+        return;
       }
       else
       {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-        parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-        if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
+        if(!checkKnowledge(&bu))
         {
-          Serial.println("Message did not come from BU");
-          IrReceiver.resume();
+          Serial.println("Target location is not known by the BU.");
         }
         else
         {
-          if(!checkRange(&bu))      //BU always signals IN. Initially BU struct is OUT, if the first message comes from the BU skip this block otherwise resume and return
-          {
-            Serial.println("Not in proper range.");
-            IrReceiver.resume();
-          }
-          else
-          {
-            if(checkReceivement(&bu, &mu))   //If the message that is sent from MU to BU is received by BU give semEndSendMU to end the Communication and close the transmitter of the MU
-            {
-              Serial.println("ACK Message and information are received from BU.");
-              setReceivementMU(&mu);   //Set the receivement info of MU
-              xSemaphoreGive(semEndSendMU);
-              if(!checkKnowledge(&bu))
-              {
-                Serial.println("Target location is not known by the BU.");
-              }
-              else
-              {
-                locTargetBU = bu.uiBUTargetLocation;
-              }
-            }
-            else
-            {
-              xSemaphoreTake(semWaitReceiveMU, portMAX_DELAY);  //Wait forever until the semaphore is given by sending task. It is used for preventing the semaphore below becomes overgiven
-              xSemaphoreGive(semStartSendMU); //When this semaphore is given, sending task starts.
-            }
-            IrReceiver.resume();
-          }
+          locTargetBU = bu.uiBUTargetLocation;
+          Serial.println(locTargetBU);
         }
+        IrReceiver.resume();
+        return;
       }
     }
   }
@@ -195,9 +146,7 @@ void receiveMessageMU(void* ptr)
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation)
 {
   unsigned int message;
-  message = ((~uiTargetLocation) << 24) |(uiHeader << 20) | (uiReceivement << 18) | (uiFinding << 16) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
-  Serial.print("Mobile Unit Message: ");
-  Serial.println(message, HEX);
+  message =((~((uiHeader<<4) | (uiReceivement << 2) | (uiFinding))) << 24) |(uiHeader << 20) | (uiReceivement << 18) | (uiFinding << 16) | (uiCurrentLocation << 8) | (uiTargetLocation << 0);
   return message;
 }
 
@@ -207,19 +156,14 @@ unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, 
 ******************************************************************************/
 void parseMessageMU(unsigned int message)
 {
-  unsigned int uiHeader = (message | 0x00F00000) >> 20;
-  unsigned int uiReceivement = (message | 0x000F0000) >> 16;
-  unsigned int uiRange = (message | 0x0000F000) >> 12;
-  unsigned int uiKnowing = (message | 0x00000F00) >> 8;
-  unsigned int uiTargetLocation = (message | 0x000000FF) >> 0;
+  unsigned int uiHeader = (message & 0x00F00000) >> 20;
+  unsigned int uiReceivement = (message & 0x000F0000) >> 16; // NO USE
+  unsigned int uiRange = (message & 0x0000F000) >> 12;        //NO USE
+  unsigned int uiKnowing = (message & 0x00000F00) >> 8;
+  unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
   
-  Serial.println("Message is being parsing:");
   Serial.print("Header: ");
   Serial.println(uiHeader, HEX);
-  Serial.print("Receivement: ");
-  Serial.println(uiReceivement, HEX);
-  Serial.print("Range: ");
-  Serial.println(uiRange, HEX);
   Serial.print("Knowing: ");
   Serial.println(uiKnowing, HEX);
   Serial.print("Target Location: ");
@@ -232,23 +176,13 @@ void parseMessageMU(unsigned int message)
   bu.uiBUTargetLocation = uiTargetLocation; 
 }
 
-
-/*****************************************************************************
-* Function: checkRange(BU* bu)
-* Aim: Checks the range info for MU
-******************************************************************************/
-int checkRange(BU* bu)
-{
-  return (bu->uiBURange == BU_IN);
-}
-
 /*****************************************************************************
 * Function: checkDecode(unsigned int rawdata)
 * Aim: Checks the decode for MU
 ******************************************************************************/
 int checkDecode(unsigned int rawdata)
 {
-  return ((rawdata & 0xFF000000) >> 24) == (~(rawdata & 0x000000FF));
+  return (((rawdata & 0xFF000000) >> 24) == ((~(rawdata >> 16)) & 0x000000FF));
 }
 
 /*****************************************************************************
@@ -260,67 +194,41 @@ int checkHeader(BU* bu)
   return (bu->uiBUHeader == BU_NAME);
 }
 
-/*****************************************************************************
-* Function: checkReceivement(BU* bu, MU* mu)
-* Aim: Checks the receivement info of BU for MU
-******************************************************************************/
-int checkReceivement(BU* bu, MU* mu)
-{
-  return (bu->uiBUReceivement == (mu->uiMUHeader-1));
-}
-
-/*****************************************************************************
-* Function: resetBURange(BU* bu)
-* Aim: When the first communicaton cycle is finished it pulls the range value out
-******************************************************************************/
-void resetBURange(BU* bu)
-{
-  bu->uiBURange = BU_OUT;
-}
-
-/*****************************************************************************
-* Function: resetReceivementMU(MU* mu)
-* Aim: Resets the receivement info for MU
-******************************************************************************/
-void resetReceivementMU(MU* mu) //resets receivement
-{
-  mu->uiMUReceivement = MU_MSG_NOT_RECEIVED;
-}
-
-/*****************************************************************************
-* Function: setReceivementMU(MU* mu)
-* Aim: Sets the receivement info for MU
-******************************************************************************/
-void setReceivementMU(MU* mu) //sets receivement
-{
-  mu->uiMUReceivement = MU_MSG_RECEIVED;
-}
-
 int checkKnowledge(BU* bu)
 {
   return (bu->uiBUKnowledge == BU_TARGET_KNOWN);
 }
+
+
+void setFinding(MU* mu)
+{
+  mu->uiMUFinding = (mu->uiMUCurrentLocation == 0x64) ? MU_TARGET_FOUND : MU_TARGET_NOT_FOUND;
+}
 /************************RFID FUNCTIONS******************************/
 
-void readRFID(void* ptr)
+void readRFID(void)
 {
-  while(1)
-  {
+    
     // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
     if (!rfid.PICC_IsNewCardPresent()) 
     {
       mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
+      return;
     }
     // Verify if the NUID has been readed
     if ( !rfid.PICC_ReadCardSerial()) {
+      return;
     }
+
+   
     // Store NUID into nuidPICC array
     for (byte i = 0; i < 4; i++) {
       nuidPICC[i] = rfid.uid.uidByte[i];
     }
+
+     
     // Stop encryption on PCD
     rfid.PCD_StopCrypto1();
-  }
 }
 
 int encodeRFID(byte *buffer) {
@@ -732,6 +640,65 @@ int encodeRFID(byte *buffer) {
 
   else {
     //Serial.println("Unknown");
-    return 0;
+    return 204;
+  }
+}
+/*******************STEP FUNCTIONS************************/
+
+/*****************************************************************************
+* Function: taskMotorControl(void *pvParameters)
+* Aim: Task for step motor
+******************************************************************************/
+void taskMotorControl(void *pvParameters) {
+  while (true) {
+    // 512 Adım Tam Tur 360 Derecedir.
+    controlMotor(512); // Clockwise rotation
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    // Reverse rotation
+    controlMotor(-512);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+/*****************************************************************************
+* Function: taskMotorControl(void *pvParameters)
+* Aim: Turns step motor
+******************************************************************************/
+void controlMotor(int steps) {
+  for (int i = 0; i < abs(steps); i++) {
+
+    if(steps>0) 
+    {
+
+      digitalWrite(IN4, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN4, LOW);
+      digitalWrite(IN3, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN2, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN1, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN1, LOW);
+
+    }
+    else 
+    {
+
+      digitalWrite(IN1, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, HIGH);
+      delayMicroseconds(sure);
+      digitalWrite(IN4,LOW);
+    }
   }
 }

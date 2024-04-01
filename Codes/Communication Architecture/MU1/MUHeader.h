@@ -5,7 +5,7 @@
 
 
 /**************************************************/
-//#define DECODE_NEC
+#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
 #include <SPI.h>
@@ -52,6 +52,7 @@
 /*************************************************/
 /***********TILE IDS*************/
 #define UNKNOWN     0x00
+#define TARGET      0x64
 
 #define TILE_A1     0x01
 #define TILE_A2     0x02
@@ -147,8 +148,8 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU_TRANSMITTER         5
-#define MU_RECEIVER            15
+#define MU_TRANSMITTER         33
+#define MU_RECEIVER            26
 
 /*************************************************/
 /*******************MOTOR PINS********************/
@@ -156,8 +157,16 @@
 /*************************************************/
 /*******************RFID PINS*********************/
 
-#define SS_PIN                  17
-#define RST_PIN                 27
+#define SS_PIN                  5
+#define RST_PIN                 0
+
+/**************************************************/
+/*****************STEP PINS******************/
+#define IN1 2 //Motor
+#define IN2 4 //Sürücü
+#define IN3 16  //Pin
+#define IN4 17  //Bağlantıları
+
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -168,7 +177,7 @@ typedef struct MU_STRUCT
   unsigned int uiMUHeader = MU1_NAME;
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
   unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
-  unsigned int uiMUCurrentLocation;
+  unsigned int uiMUCurrentLocation = 0x38;
   unsigned int uiMUTargetLocation = UNKNOWN;  
 
 }MU;
@@ -190,19 +199,17 @@ typedef struct BU_STRUCT
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
 void parseMessageMU(unsigned int message); //MU parses the message coming from BU
 
-void sendMessageMU(void* ptr); //Message sent by MU
-void receiveMessageMU(void* ptr); //Message received by MU
+void sendMessageMU(void); //Message sent by MU
+void receiveMessageMU(void); //Message received by MU
 
-int checkRange(BU* bu);
 int checkDecode(unsigned int rawdata);
-int checkReceivement(BU* bu);
 int checkHeader(BU* bu);
+void setFinding(MU* mu);
 
-void resetReceivementMU(MU* mu);
-void setReceivementMU(MU* mu);
-
-void resetBURange(BU* bu);
 int checkKnowledge(BU* bu);
 
-void readRFID(void* ptr);
+void readRFID(void);
+
+void taskMotorControl(void *pvParameters);
+void controlMotor(int steps);
 
