@@ -39,11 +39,10 @@ void setup() {
   pinMode(MU_TRANSMITTER, OUTPUT);
   IrSender.begin(MU_TRANSMITTER);
 
-  /******************STEP MOTOR***********************/
-  pinMode(IN1, OUTPUT); //Pinleri
-  pinMode(IN2, OUTPUT); //Çıkış
-  pinMode(IN3, OUTPUT); //Olarak
-  pinMode(IN4, OUTPUT); //Tanımladık
+  /******************DC MOTOR***********************/
+  pinMode(PIN_IN1, OUTPUT);
+  pinMode(PIN_IN2, OUTPUT);
+  pinMode(PIN_ENA, OUTPUT);
 
   // Create FreeRTOS task
   xTaskCreatePinnedToCore(
@@ -62,7 +61,6 @@ void loop() {
   readRFID();
   receiveMessageMU();
   sendMessageMU();
-
 }
 
 /*********************COMMUNICATION FUNCTIONS*********************************/
@@ -643,62 +641,19 @@ int encodeRFID(byte *buffer) {
     return 204;
   }
 }
-/*******************STEP FUNCTIONS************************/
+/*******************DC MOTOR FUNCTIONS************************/
 
 /*****************************************************************************
 * Function: taskMotorControl(void *pvParameters)
-* Aim: Task for step motor
+* Aim: Task for DC motor
 ******************************************************************************/
-void taskMotorControl(void *pvParameters) {
-  while (true) {
-    // 512 Adım Tam Tur 360 Derecedir.
-    controlMotor(512); // Clockwise rotation
+void taskMotorControl(void *pvParameters) 
+{
+  while (true) 
+  {
+    analogWrite(PIN_ENA, 100);
+    digitalWrite(PIN_IN1, HIGH); // Motorun yönünü saat yönünde kontrol et   
+    digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
     vTaskDelay(10 / portTICK_PERIOD_MS);
-    // Reverse rotation
-    controlMotor(-512);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-}
-
-/*****************************************************************************
-* Function: taskMotorControl(void *pvParameters)
-* Aim: Turns step motor
-******************************************************************************/
-void controlMotor(int steps) {
-  for (int i = 0; i < abs(steps); i++) {
-
-    if(steps>0) 
-    {
-
-      digitalWrite(IN4, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN4, LOW);
-      digitalWrite(IN3, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN3, LOW);
-      digitalWrite(IN2, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN2, LOW);
-      digitalWrite(IN1, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN1, LOW);
-
-    }
-    else 
-    {
-
-      digitalWrite(IN1, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN1, LOW);
-      digitalWrite(IN2, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN2, LOW);
-      digitalWrite(IN3, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN3, LOW);
-      digitalWrite(IN4, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN4,LOW);
-    }
   }
 }

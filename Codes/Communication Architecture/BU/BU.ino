@@ -10,8 +10,6 @@ unsigned int currentLoc1;
 unsigned int currentLoc2;
 unsigned int currentLoc3;
 
-int sure = 2000; //Her adımda bekleme süresi
-
 void setup() 
 {
   mu1.uiMUHeader = MU1_NAME;
@@ -23,10 +21,10 @@ void setup()
   pinMode(BU_TRANSMITTER, OUTPUT);
   IrSender.begin(BU_TRANSMITTER);
 
-  pinMode(IN1, OUTPUT); //Pinleri
-  pinMode(IN2, OUTPUT); //Çıkış
-  pinMode(IN3, OUTPUT); //Olarak
-  pinMode(IN4, OUTPUT); //Tanımladık
+  pinMode(PIN_IN1, OUTPUT);
+  pinMode(PIN_IN2, OUTPUT);
+  pinMode(PIN_ENA, OUTPUT);
+
 
   xTaskCreatePinnedToCore(
     taskMotorControl,     // Task function
@@ -277,54 +275,15 @@ void sayTargetLocation(BU* bu, MU* mu)
   bu->uiBUTargetLocation = mu->uiMUTargetLocation;
 }
 
-/*****************STEP MOTOR **********************************************/
+/*****************DC MOTOR **********************************************/
 
-void taskMotorControl(void *pvParameters) {
-  while (true) {
-    // 512 Adım Tam Tur 360 Derecedir.
-    controlMotor(512); // Clockwise rotation
+void taskMotorControl(void *pvParameters) 
+{
+  while (true) 
+  {
+    analogWrite(PIN_ENA, 100);
+    digitalWrite(PIN_IN1, HIGH); // Motorun yönünü saat yönünde kontrol et   
+    digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
     vTaskDelay(10 / portTICK_PERIOD_MS);
-    // Reverse rotation
-    controlMotor(-512);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-}
-
-void controlMotor(int steps) {
-  for (int i = 0; i < abs(steps); i++) {
-
-    if(steps>0) 
-    {
-
-      digitalWrite(IN4, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN4, LOW);
-      digitalWrite(IN3, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN3, LOW);
-      digitalWrite(IN2, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN2, LOW);
-      digitalWrite(IN1, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN1, LOW);
-
-    }
-    else 
-    {
-
-      digitalWrite(IN1, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN1, LOW);
-      digitalWrite(IN2, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN2, LOW);
-      digitalWrite(IN3, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN3, LOW);
-      digitalWrite(IN4, HIGH);
-      delayMicroseconds(sure);
-      digitalWrite(IN4,LOW);
-    }
   }
 }

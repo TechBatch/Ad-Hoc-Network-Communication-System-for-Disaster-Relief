@@ -5,7 +5,7 @@
 
 
 /**************************************************/
-//#define DECODE_NEC
+#define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
 
@@ -150,11 +150,11 @@
 
 
 /*************************************************/
-/***************STEP PINS****************/
-#define IN1 19 //Motor
-#define IN2 18 //Sürücü
-#define IN3 5 //Pin
-#define IN4 17  //Bağlantıları
+/***************DC MOTOR PINS****************/
+
+#define PIN_IN1     4
+#define PIN_IN2     2
+#define PIN_ENA     15
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -198,4 +198,3 @@ void resetKnowledgeBU(BU* bu);
 void sayTargetLocation(BU* bu, MU* mu);
 
 void taskMotorControl(void *pvParameters);
-void controlMotor(int steps);

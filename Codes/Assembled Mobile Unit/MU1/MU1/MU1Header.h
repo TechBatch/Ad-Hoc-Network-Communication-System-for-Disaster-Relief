@@ -6,16 +6,31 @@
 
 /**************************************************/
 #define DECODE_NEC
+#define CUSTOM_SETTINGS
+#define INCLUDE_TERMINAL_MODULE
+/**************************************************/
+/*********************LIB*************************/
 #include <IRremote.hpp>
 #include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include "I2Cdev.h"
+#include <Wire.h>
+#include <TB6612_ESP32.h>
+#include <iostream>
+#include <algorithm>
+#include <queue>
+#include <stack>
+#include <climits>
+#include "grid.h"
+#include "grid_functions.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include "Wire.h"
+#endif
 
 
-
-#define UINT8                   unsigned char
-#define UINT16                  unsigned short int
-#define UINT32                  unsigned int
 
 /*************************************************/
 /*******************HEADERS********************/
@@ -51,7 +66,7 @@
 
 /*************************************************/
 /***********TILE IDS*************/
-#define UNKNOWN     0x00
+#define UNKNOWN     0x77
 #define TARGET      0x64
 
 #define TILE_A1     0x01
@@ -144,11 +159,22 @@
 #define TILE_I8     0x58
 #define TILE_I9     0x59
 
+/*************************************************/
+/***************DISTANCE SENSOR*******************/
+
+#define SOUND_SPEED     0.034
+#define CM_TO_INCH      0.393701
+
+/*************************************************/
+/***********************GYRO**********************/
+
+#define OUTPUT_READABLE_YAWPITCHROLL
+#define OUTPUT_READABLE_REALACCEL
 
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU_TRANSMITTER         33
+#define MU_TRANSMITTER         33 /*****************WARNING*****MOTOR DRIVER****************/
 #define MU_RECEIVER            26
 
 /*************************************************/
@@ -161,10 +187,32 @@
 #define RST_PIN                 0
 
 /**************************************************/
-/*****************STEP PINS******************/
-#define PIN_IN1     4
-#define PIN_IN2     2
-#define PIN_ENA     15
+/*****************DC MOTOR PINS******************/
+#define PIN_IN1     4   /*****************WARNING***********MOTOR DRIVER**********/
+#define PIN_IN2     2   /*****************WARNING***********INTERRUPT PIN**********/
+#define PIN_ENA     15  /*****************WARNING***********MOTOR DRIVER**********/
+
+/*************************************************/
+/***************DISTANCE SENSOR*******************/
+
+#define trigPin     17
+#define echoPin     16
+
+/*************************************************/
+/***********************GYRO**********************/
+
+#define INTERRUPT_PIN     2 
+
+/*************************************************/
+/*****************MOTOR DRIVER********************/
+
+#define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
+#define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
+#define AIN2 4 // ESP32 Pin D14 to TB6612FNG Pin AIN2
+#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+#define PWMA 15 // ESP32 Pin D26 to TB6612FNG Pin PWMA
+#define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
+#define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -175,7 +223,7 @@ typedef struct MU_STRUCT
   unsigned int uiMUHeader = MU1_NAME;
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
   unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
-  unsigned int uiMUCurrentLocation = 0x38;
+  unsigned int uiMUCurrentLocation = UNKNOWN;
   unsigned int uiMUTargetLocation = UNKNOWN;  
 
 }MU;
@@ -194,19 +242,26 @@ typedef struct BU_STRUCT
 
 /*********************************/
 
+/**************COMMUNICATION FUNC DEF*****************/
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation);
 void parseMessageMU(unsigned int message); //MU parses the message coming from BU
-
-void sendMessageMU(void); //Message sent by MU
-void receiveMessageMU(void); //Message received by MU
-
 int checkDecode(unsigned int rawdata);
 int checkHeader(BU* bu);
 void setFinding(MU* mu);
-
 int checkKnowledge(BU* bu);
+/**************GYRO FUNC DEF*************/
+void dmpDataReady(void);
 
-void readRFID(void);
+/**************RFID FUNC DEF*************/
+int encodeRFID(byte *buffer);
 
+/************MOTOR FUNC DEF**************/
+int encode_direction(int last_loc,int current_loc, int old_diff);
+void PID_forward(void);
+void PID_backward(void);
+void rotate(void);
+/*************TASKS DEF************/
 void taskMotorControl(void *pvParameters);
-
+void taskRFIDRead(void *pvParameters);
+void taskSendMessageMU(void *pvParameters);
+void taskReceiveMessageMU(void *pvParameters);

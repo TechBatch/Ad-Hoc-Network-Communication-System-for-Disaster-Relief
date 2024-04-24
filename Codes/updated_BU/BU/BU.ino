@@ -306,7 +306,7 @@ void controlMotor() {
     analogWrite(PIN_ENA, 100);
     digitalWrite(PIN_IN1, HIGH); // Motorun yönünü saat yönünde kontrol et   
     digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
-    delayMicroseconds(1000);
+    //delayMicroseconds(1000);
 }
 
 void controlMotor2() {
