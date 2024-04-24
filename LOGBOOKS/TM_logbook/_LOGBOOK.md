@@ -10,3 +10,7 @@ This week I work on new component selection and ordering. We had multiple proble
 Secondly, I choose motors that are suitable for encoder connections and external encoders are available. We decided to buy those external encoders and use a PID algorithm with an encoder for backup if our new components won't work as we expected. Thus I also worked on those algorithms.
 
 ## Week Mar. 4-10
+
+
+## Week Mar. 11-17
+This week we bought a new motor driver with Mosfets that can apply a more stable current, have thermal shut-down, and have a standby current. We try that driver. Moreover, we adjusted our PID algorithm and the new algorithm performs well with our old car. I tried our new motors however we decided those new motors may not be suitable for our car and we decided to keep looking for better motors in the following week.
