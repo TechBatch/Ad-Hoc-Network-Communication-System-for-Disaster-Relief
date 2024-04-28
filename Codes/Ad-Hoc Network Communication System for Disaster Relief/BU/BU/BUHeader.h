@@ -184,8 +184,8 @@ typedef struct BU_STRUCT
 unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiRange, unsigned int uiKnowing, unsigned int uiTargetLocation);
 void parseMessageBU(unsigned int message); //BU parses the message coming from MU
 
-void sendMessageBU(void); //Message sent by BU
-void receiveMessageBU(void); //Message received by BU
+void taskSendMessageBU(void *pvParameters); //Message sent by BU
+void taskReceiveMessageBU(void *pvParameters); //Message received by BU
 
 unsigned int getHeader(unsigned int rawdata);
 int checkFinding(MU* mu);
