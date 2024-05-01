@@ -215,7 +215,7 @@ void setup() {
     "RFIDReaderTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    1,                    // Priority
+    2,                    // Priority
     NULL                 // Task handle
   );
   xTaskCreate(
@@ -239,7 +239,7 @@ void setup() {
     "MovementControllerTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    1,                    // Priority
+    2,                    // Priority
     NULL                 // Task handle
   );
 }
@@ -891,11 +891,11 @@ void taskRFIDRead(void *pvParameters) //Task for RFID Reader
       if (!rfid.PICC_IsNewCardPresent()) 
       {
         mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
-        return;
+        continue;
       }
       // Verify if the NUID has been readed
       if ( !rfid.PICC_ReadCardSerial()) {
-        return;
+        continue;
       }
 
     
@@ -936,7 +936,6 @@ void taskReceiveMessageMU(void *pvParameters)
     if(!IrReceiver.decodeNEC())
     {
       IrReceiver.resume();
-      return;
     }
     else
     {
@@ -947,7 +946,6 @@ void taskReceiveMessageMU(void *pvParameters)
       {
         Serial.println("Message is lost. Wait for the new receivement.");
         IrReceiver.resume();
-        return;
       }
       else
       {
@@ -958,7 +956,6 @@ void taskReceiveMessageMU(void *pvParameters)
         {
           Serial.println("Message did not come from BU");
           IrReceiver.resume();
-          return;
         }
         else
         {
@@ -972,7 +969,6 @@ void taskReceiveMessageMU(void *pvParameters)
             Serial.println(bu.uiBUTargetLocation);
           }
           IrReceiver.resume();
-          return;
         }
       }
     }
@@ -984,7 +980,7 @@ void taskMovementMotor(void *pvParameters)
   while(1)
   {
     if (!dmpReady){
-    return;
+    continue;
     } 
     // read a packet from FIFO
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
@@ -1041,7 +1037,7 @@ void taskMovementMotor(void *pvParameters)
         Serial.println(mu.uiMUCurrentLocation);
 
         if(mu.uiMUCurrentLocation == UNKNOWN){
-          return;
+          continue;
         }
         
         
@@ -1050,7 +1046,7 @@ void taskMovementMotor(void *pvParameters)
             first_position = mu.uiMUCurrentLocation;
             flag_first_pos = false;
             flag_second_pos = true;
-            return;
+            continue;
           }
           if((flag_second_pos == true) && mu.uiMUCurrentLocation != first_position){ 
             second_position = mu.uiMUCurrentLocation;

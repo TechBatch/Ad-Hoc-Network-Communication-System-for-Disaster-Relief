@@ -54,8 +54,7 @@ void setup()
 }
 
 
-void loop() {
-
+void loop() {  
 }
 /*********************************************************/
 /***************COMMUNICATION FUNCTIONS*******************/
@@ -216,7 +215,6 @@ void taskReceiveMessageBU(void *pvParameters)
     if(!IrReceiver.decodeNEC())
     {
       IrReceiver.resume();
-      return;
     }
     else
     {
@@ -225,7 +223,6 @@ void taskReceiveMessageBU(void *pvParameters)
       {
         Serial.println("Message is lost. Wait for the new receivement.");
         IrReceiver.resume();
-        return;
       }
       else
       {
@@ -236,7 +233,6 @@ void taskReceiveMessageBU(void *pvParameters)
         {
           Serial.println("Message did not come from any MU");
           IrReceiver.resume();
-          return;
         }
         else
         {
@@ -294,7 +290,6 @@ void taskReceiveMessageBU(void *pvParameters)
             break;
           }
           IrReceiver.resume();
-          return;
         }
       }
     }
