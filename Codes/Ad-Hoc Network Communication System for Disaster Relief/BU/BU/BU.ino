@@ -154,7 +154,7 @@ int checkHeader(void)
 ******************************************************************************/
 unsigned int getHeader(unsigned int rawdata)
 {
-  return ((rawdata | 0x00F00000) >> 20);
+  return ((rawdata & 0x00F00000) >> 20);
 }
 /*****************************************************************************
 * Function: checkFinding(MU* mu)

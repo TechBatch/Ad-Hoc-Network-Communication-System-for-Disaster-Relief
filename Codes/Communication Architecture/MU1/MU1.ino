@@ -651,7 +651,7 @@ void taskMotorControl(void *pvParameters)
 {
   while (true) 
   {
-    analogWrite(PIN_ENA, 100);
+    analogWrite(PIN_ENA, 80);
     digitalWrite(PIN_IN1, HIGH); // Motorun yönünü saat yönünde kontrol et   
     digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
     vTaskDelay(10 / portTICK_PERIOD_MS);
