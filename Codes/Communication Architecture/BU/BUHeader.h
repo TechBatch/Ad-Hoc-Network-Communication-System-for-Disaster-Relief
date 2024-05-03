@@ -165,7 +165,7 @@ typedef struct MU_STRUCT
   unsigned int uiMUHeader; //initial given
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED; //No need
   unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;   //Have to check
-  unsigned int uiMUCurrentLocation;                 //Needed for GUI
+  unsigned int uiMUCurrentLocation = UNKNOWN;                 //Needed for GUI
   unsigned int uiMUTargetLocation = UNKNOWN;      //Have to check according to finding info
 }MU;
 

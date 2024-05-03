@@ -725,7 +725,7 @@ int encodeRFID(byte *buffer) {
 
   else {
     //Serial.println("Unknown");
-    return 204;
+    return UNKNOWN;
   }
 }
 
@@ -949,16 +949,16 @@ void taskReceiveMessageMU(void *pvParameters)
       }
       else
       {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
         parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
         if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
         {
-          Serial.println("Message did not come from BU");
+          //Serial.println("Message did not come from BU");
           IrReceiver.resume();
         }
         else
         {
+        Serial.print("Message is decoded: ");
+        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
           if(!checkKnowledge(&bu))
           {
             Serial.println("Target location is not known by the BU.");

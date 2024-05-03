@@ -86,16 +86,17 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
   unsigned int uiCurrentLocation = (message & 0x0000FF00) >> 8;
   unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
 
-  Serial.print("Header: ");
-  Serial.println(uiHeader, HEX);
-  Serial.print("Finding: ");
-  Serial.println(uiFinding, HEX);
-  Serial.print("MU Location: ");
-  Serial.println(uiCurrentLocation, HEX);
-  Serial.print("Target Location: ");
-  Serial.println(uiTargetLocation, HEX);
-
-  
+  if(uiHeader != BU_NAME)
+  {
+    Serial.print("Header: ");
+    Serial.println(uiHeader, HEX);
+    Serial.print("Finding: ");
+    Serial.println(uiFinding, HEX);
+    Serial.print("MU Location: ");
+    Serial.println(uiCurrentLocation, HEX);
+    Serial.print("Target Location: ");
+    Serial.println(uiTargetLocation, HEX);
+  }
   switch(uiHeader)
   {
     case MU1_NAME:
@@ -227,7 +228,7 @@ void taskReceiveMessageBU(void *pvParameters)
       else
       {
         parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-        if(!checkHeader())                                     //Check the header if wrong resume and return
+        if(!checkHeader(IrReceiver.decodedIRData.decodedRawData))   //Check the header if wrong resume and return
         {
           Serial.println("Message did not come from any MU");
           IrReceiver.resume();

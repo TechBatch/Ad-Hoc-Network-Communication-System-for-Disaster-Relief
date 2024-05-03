@@ -642,7 +642,7 @@ int encodeRFID(byte *buffer) {
 
   else {
     //Serial.println("Unknown");
-    return 204;
+    return UNKNOWN;
   }
 }
 /*******************DC MOTOR FUNCTIONS************************/
