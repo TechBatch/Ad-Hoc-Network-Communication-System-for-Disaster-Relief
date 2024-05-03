@@ -216,7 +216,6 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
     break;
   }
 }
-<
 /*****************************************************************************
 * Function: checkDecode(unsigned int rawdata)
 * Aim: Checks the decode for MU

@@ -226,8 +226,6 @@ void taskReceiveMessageBU(void *pvParameters)
       }
       else
       {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
         parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
         if(!checkHeader())                                     //Check the header if wrong resume and return
         {
@@ -236,6 +234,8 @@ void taskReceiveMessageBU(void *pvParameters)
         }
         else
         {
+          Serial.print("Message is decoded: ");
+          Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
           switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
           {
             case 2: //MU1
