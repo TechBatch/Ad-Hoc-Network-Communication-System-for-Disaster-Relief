@@ -143,9 +143,9 @@ int checkDecode(unsigned int rawdata)
 * Function: checkHeader(void) 
 * Aim: Compares the message header with BU header for MU
 ******************************************************************************/
-int checkHeader(void)  
+int checkHeader(unsigned int message)  
 {
-  return ((mu1.uiMUHeader == MU1_NAME) && (mu2.uiMUHeader == MU2_NAME) && (mu3.uiMUHeader == MU3_NAME));
+  return ((((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME));
 }
 
 /*****************************************************************************

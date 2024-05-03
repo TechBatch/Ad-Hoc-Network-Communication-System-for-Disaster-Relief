@@ -67,8 +67,7 @@ void receiveMessageBU()
   }
   else
   {
-    //delay(50);
-    Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX); 
+    //delay(50); 
     if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
     {
       Serial.println("Message is lost. Wait for the new receivement.");
@@ -77,17 +76,17 @@ void receiveMessageBU()
     }
     else
     {
-      Serial.print("Message is decoded: ");
-      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
       parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-      if(!checkHeader())                                     //Check the header if wrong resume and return
+      if(!checkHeader(IrReceiver.decodedIRData.decodedRawData)) //Check the header if wrong resume and return
       {
-        Serial.println("Message did not come from any MU");
+        //Serial.println("Message did not come from any MU");
         IrReceiver.resume();
         return;
       }
       else
       {
+        Serial.print("Message is decoded: ");
+        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
         switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
         {
           case 2: //MU1
@@ -173,16 +172,17 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
   unsigned int uiCurrentLocation = (message & 0x0000FF00) >> 8;
   unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
 
-  Serial.print("Header: ");
-  Serial.println(uiHeader, HEX);
-  Serial.print("Finding: ");
-  Serial.println(uiFinding, HEX);
-  Serial.print("MU Location: ");
-  Serial.println(uiCurrentLocation, HEX);
-  Serial.print("Target Location: ");
-  Serial.println(uiTargetLocation, HEX);
-
-  
+  if(uiHeader != 0x1)
+  {
+    Serial.print("Header: ");
+    Serial.println(uiHeader, HEX);
+    Serial.print("Finding: ");
+    Serial.println(uiFinding, HEX);
+    Serial.print("MU Location: ");
+    Serial.println(uiCurrentLocation, HEX);
+    Serial.print("Target Location: ");
+    Serial.println(uiTargetLocation, HEX);
+  }  
   switch(uiHeader)
   {
     case MU1_NAME:
@@ -216,7 +216,7 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
     break;
   }
 }
-
+<
 /*****************************************************************************
 * Function: checkDecode(unsigned int rawdata)
 * Aim: Checks the decode for MU
@@ -230,9 +230,9 @@ int checkDecode(unsigned int rawdata)
 * Function: checkHeader(void) 
 * Aim: Compares the message header with BU header for MU
 ******************************************************************************/
-int checkHeader(void)  
+int checkHeader(unsigned int message)  
 {
-  return ((mu1.uiMUHeader == MU1_NAME) && (mu2.uiMUHeader == MU2_NAME) && (mu3.uiMUHeader == MU3_NAME));
+  return ((((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME));
 }
 
 /*****************************************************************************

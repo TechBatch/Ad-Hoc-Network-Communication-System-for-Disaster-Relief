@@ -190,7 +190,7 @@ void receiveMessageBU(void); //Message received by BU
 unsigned int getHeader(unsigned int rawdata);
 int checkFinding(MU* mu);
 int checkDecode(unsigned int rawdata);
-int checkHeader(void);
+int checkHeader(unsigned int message);
 
 void setKnowledgeBU(BU* bu);
 void resetKnowledgeBU(BU* bu);

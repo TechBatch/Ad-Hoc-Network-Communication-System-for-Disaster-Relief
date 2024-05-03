@@ -160,12 +160,16 @@ void parseMessageMU(unsigned int message)
   unsigned int uiKnowing = (message & 0x00000F00) >> 8;
   unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
   
-  Serial.print("Header: ");
-  Serial.println(uiHeader, HEX);
-  Serial.print("Knowing: ");
-  Serial.println(uiKnowing, HEX);
-  Serial.print("Target Location: ");
-  Serial.println(uiTargetLocation, HEX);
+  if(uiHeader == 0x1)
+  {
+    Serial.print("Header: ");
+    Serial.println(uiHeader, HEX);
+    Serial.print("Knowing: ");
+    Serial.println(uiKnowing, HEX);
+    Serial.print("Target Location: ");
+    Serial.println(uiTargetLocation, HEX);
+  }
+  
   
   bu.uiBUHeader = uiHeader;
   bu.uiBUReceivement = uiReceivement;
