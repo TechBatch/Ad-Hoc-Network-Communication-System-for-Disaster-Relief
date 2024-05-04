@@ -174,7 +174,7 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU_TRANSMITTER         33 /*****************WARNING*****MOTOR DRIVER****************/
+#define MU_TRANSMITTER         32 /*****************WARNING*****MOTOR DRIVER****************/
 #define MU_RECEIVER            26
 
 /*************************************************/

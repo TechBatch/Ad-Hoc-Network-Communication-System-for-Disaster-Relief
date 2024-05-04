@@ -218,8 +218,7 @@ void taskReceiveMessageBU(void *pvParameters)
       IrReceiver.resume();
     }
     else
-    {
-      Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX); 
+    { 
       if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
       {
         Serial.println("Message is lost. Wait for the new receivement.");
@@ -227,6 +226,8 @@ void taskReceiveMessageBU(void *pvParameters)
       }
       else
       {
+        Serial.print("Message is decoded: ");
+        Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX);
         parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
         if(!checkHeader(IrReceiver.decodedIRData.decodedRawData))   //Check the header if wrong resume and return
         {
@@ -235,8 +236,6 @@ void taskReceiveMessageBU(void *pvParameters)
         }
         else
         {
-          Serial.print("Message is decoded: ");
-          Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
           switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
           {
             case 2: //MU1

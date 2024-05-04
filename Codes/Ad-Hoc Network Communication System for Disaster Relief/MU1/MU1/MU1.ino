@@ -278,13 +278,15 @@ void parseMessageMU(unsigned int message) //Parsing the messages that come from 
   unsigned int uiKnowing = (message & 0x00000F00) >> 8;
   unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
   
-  Serial.print("Header: ");
-  Serial.println(uiHeader, HEX);
-  Serial.print("Knowing: ");
-  Serial.println(uiKnowing, HEX);
-  Serial.print("Target Location: ");
-  Serial.println(uiTargetLocation, HEX);
-  
+  if(uiHeader == BU_NAME)
+  {
+    Serial.print("Header: ");
+    Serial.println(uiHeader, HEX);
+    Serial.print("Knowing: ");
+    Serial.println(uiKnowing, HEX);
+    Serial.print("Target Location: ");
+    Serial.println(uiTargetLocation, HEX);
+  }
   bu.uiBUHeader = uiHeader;
   bu.uiBUReceivement = uiReceivement;
   bu.uiBURange = uiRange;
@@ -925,7 +927,7 @@ void taskSendMessageMU(void *pvParameters) //Task for Sending Message
 
       //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
       IrSender.sendNEC(address, command, 0);
-      vTaskDelay(50 / portTICK_PERIOD_MS);
+      vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
 
@@ -939,9 +941,6 @@ void taskReceiveMessageMU(void *pvParameters)
     }
     else
     {
-    
-      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-
       if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
       {
         Serial.println("Message is lost. Wait for the new receivement.");
@@ -949,6 +948,8 @@ void taskReceiveMessageMU(void *pvParameters)
       }
       else
       {
+        Serial.print("Message is decoded: ");
+        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
         parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
         if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
         {
@@ -957,8 +958,6 @@ void taskReceiveMessageMU(void *pvParameters)
         }
         else
         {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
           if(!checkKnowledge(&bu))
           {
             Serial.println("Target location is not known by the BU.");
