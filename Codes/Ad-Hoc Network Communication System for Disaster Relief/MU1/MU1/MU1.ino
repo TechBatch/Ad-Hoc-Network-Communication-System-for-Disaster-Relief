@@ -192,9 +192,9 @@ void setup() {
 
   /******************DC MOTOR***********************/
 
-  pinMode(PIN_IN1, OUTPUT);
+  /*pinMode(PIN_IN1, OUTPUT);
   pinMode(PIN_IN2, OUTPUT);
-  pinMode(PIN_ENA, OUTPUT);
+  pinMode(PIN_ENA, OUTPUT);*/
 
   /******************COMMUNICATION*****************/
   IrReceiver.begin(MU_RECEIVER);
@@ -202,20 +202,20 @@ void setup() {
   IrSender.begin(MU_TRANSMITTER);
 
   /*****************TASK CREATIONS*****************/
-  xTaskCreate(
+  /*xTaskCreate(
     taskMotorControl,     // Task function
     "MotorControlTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
     1,                    // Priority
     NULL                 // Task handle
-  );
+  );*/
   xTaskCreate(
-    taskRFIDRead,        // Task function
-    "RFIDReaderTask",   // Task name
+    taskReceiveMessageMU,        // Task function
+    "MessageReceiverTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    2,                    // Priority
+    tskIDLE_PRIORITY,                    // Priority
     NULL                 // Task handle
   );
   xTaskCreate(
@@ -223,15 +223,15 @@ void setup() {
     "MessageSenderTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    1,                    // Priority
+    tskIDLE_PRIORITY,       // Priority
     NULL                 // Task handle
   );
-  xTaskCreate(
-    taskReceiveMessageMU,        // Task function
-    "MessageReceiverTask",   // Task name
+  /*xTaskCreate(
+    taskRFIDRead,        // Task function
+    "RFIDReaderTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    1,                    // Priority
+    tskIDLE_PRIORITY,                    // Priority
     NULL                 // Task handle
   );
   xTaskCreate(
@@ -239,9 +239,9 @@ void setup() {
     "MovementControllerTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
-    2,                    // Priority
+    tskIDLE_PRIORITY,                    // Priority
     NULL                 // Task handle
-  );
+  );*/
 }
 
 void loop() {
@@ -872,7 +872,7 @@ void dmpDataReady() {
 /***************************************************/
 /*******************TASK FUNCTIONS*****************/
 
-void taskMotorControl(void *pvParameters) //Task for DC motor
+/*void taskMotorControl(void *pvParameters) //Task for DC motor
 {
   while (true) 
   {
@@ -881,7 +881,7 @@ void taskMotorControl(void *pvParameters) //Task for DC motor
     digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-}
+}*/
 
 void taskRFIDRead(void *pvParameters) //Task for RFID Reader
 {
@@ -925,7 +925,7 @@ void taskSendMessageMU(void *pvParameters) //Task for Sending Message
 
       //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
       IrSender.sendNEC(address, command, 0);
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 }
 

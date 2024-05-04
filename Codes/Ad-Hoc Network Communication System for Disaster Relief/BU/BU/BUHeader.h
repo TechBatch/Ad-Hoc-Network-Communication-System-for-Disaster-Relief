@@ -152,9 +152,9 @@
 /*************************************************/
 /***************DC MOTOR PINS****************/
 
-#define PIN_IN1     4
-#define PIN_IN2     2
-#define PIN_ENA     15
+//#define PIN_IN1     4
+//#define PIN_IN2     2
+//#define PIN_ENA     15
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -197,4 +197,4 @@ void resetKnowledgeBU(BU* bu);
 
 void sayTargetLocation(BU* bu, MU* mu);
 
-void taskMotorControl(void *pvParameters);
+//void taskMotorControl(void *pvParameters);

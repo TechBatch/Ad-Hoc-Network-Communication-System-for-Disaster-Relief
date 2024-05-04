@@ -188,9 +188,9 @@
 
 /**************************************************/
 /*****************DC MOTOR PINS******************/
-#define PIN_IN1     4   /*****************WARNING***********MOTOR DRIVER**********/
-#define PIN_IN2     2   /*****************WARNING***********INTERRUPT PIN**********/
-#define PIN_ENA     15  /*****************WARNING***********MOTOR DRIVER**********/
+//#define PIN_IN1     4   /*****************WARNING***********MOTOR DRIVER**********/
+//#define PIN_IN2     2   /*****************WARNING***********INTERRUPT PIN**********/
+//#define PIN_ENA     15  /*****************WARNING***********MOTOR DRIVER**********/
 
 /*************************************************/
 /***************DISTANCE SENSOR*******************/

@@ -51,7 +51,7 @@
 
 /*************************************************/
 /***********TILE IDS*************/
-#define UNKNOWN     0x00
+#define UNKNOWN     0x77
 #define TARGET      0x64
 
 #define TILE_A1     0x01

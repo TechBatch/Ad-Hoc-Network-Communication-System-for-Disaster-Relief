@@ -21,20 +21,20 @@ void setup()
   pinMode(BU_TRANSMITTER, OUTPUT);
   IrSender.begin(BU_TRANSMITTER);
 
-  pinMode(PIN_IN1, OUTPUT);
+  /*pinMode(PIN_IN1, OUTPUT);
   pinMode(PIN_IN2, OUTPUT);
-  pinMode(PIN_ENA, OUTPUT);
+  pinMode(PIN_ENA, OUTPUT);*/
 
 
   /*****************TASK CREATIONS*****************/
-  xTaskCreate(
+  /*xTaskCreate(
     taskMotorControl,     // Task function
     "MotorControlTask",   // Task name
     2048,                // Stack size (in words)
     NULL,                 // Task input parameter
     1,                    // Priority
     NULL                 // Task handle
-  );
+  );*/
   xTaskCreate(
     taskSendMessageBU,        // Task function
     "MessageSenderTask",   // Task name
@@ -205,7 +205,7 @@ void taskSendMessageBU(void *pvParameters) //BU continously send message that it
     command = (unsigned int)((msg & 0x00FF0000)>>16);
 
     IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
@@ -300,7 +300,7 @@ void taskReceiveMessageBU(void *pvParameters)
 
 /*****************DC MOTOR **********************************************/
 
-void taskMotorControl(void *pvParameters) 
+/*void taskMotorControl(void *pvParameters) 
 {
   while (true) 
   {
@@ -309,4 +309,4 @@ void taskMotorControl(void *pvParameters)
     digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-}
+}*/
