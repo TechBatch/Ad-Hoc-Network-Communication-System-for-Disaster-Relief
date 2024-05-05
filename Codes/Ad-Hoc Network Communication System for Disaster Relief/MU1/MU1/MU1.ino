@@ -210,38 +210,34 @@ void setup() {
     1,                    // Priority
     NULL                 // Task handle
   );*/
-  xTaskCreate(
-    taskReceiveMessageMU,        // Task function
-    "MessageReceiverTask",   // Task name
-    2048,                // Stack size (in words)
+  xTaskCreatePinnedToCore(
+    taskCommunicate,        // Task function
+    "CommunicationTask",   // Task name
+    4096,                // Stack size (in words)
     NULL,                 // Task input parameter
-    tskIDLE_PRIORITY,                    // Priority
-    NULL                 // Task handle
+    //tskIDLE_PRIORITY,                    // Priority
+    1,
+    NULL,                 // Task handle
+    PRO_CPU_NUM
   );
-  xTaskCreate(
-    taskSendMessageMU,        // Task function
-    "MessageSenderTask",   // Task name
-    2048,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    tskIDLE_PRIORITY,       // Priority
-    NULL                 // Task handle
-  );
-  /*xTaskCreate(
-    taskRFIDRead,        // Task function
-    "RFIDReaderTask",   // Task name
-    2048,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    tskIDLE_PRIORITY,                    // Priority
-    NULL                 // Task handle
-  );
-  xTaskCreate(
+  xTaskCreatePinnedToCore(
     taskMovementMotor,        // Task function
     "MovementControllerTask",   // Task name
-    2048,                // Stack size (in words)
+    4096,                // Stack size (in words)
     NULL,                 // Task input parameter
-    tskIDLE_PRIORITY,                    // Priority
-    NULL                 // Task handle
-  );*/
+    1,                    // Priority
+    NULL,                 // Task handle
+    APP_CPU_NUM
+  );
+  xTaskCreatePinnedToCore(
+    taskRFIDRead,        // Task function
+    "RFIDReaderTask",   // Task name
+    4096,                // Stack size (in words)
+    NULL,                 // Task input parameter
+    NULL,                    // Priority
+    NULL,                 // Task handle
+    APP_CPU_NUM
+  );
 }
 
 void loop() {
@@ -262,6 +258,49 @@ void loop() {
 
 /********************************************************/
 /****************COMMUNICATION FUNCTIONS*****************/
+void ReceiveMessageMU(void)
+{
+  if(!IrReceiver.decodeNEC())
+  {
+    IrReceiver.resume();
+    return;
+  }
+  else
+  {
+    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+    {
+      Serial.println("Message is lost. Wait for the new receivement.");
+      IrReceiver.resume();
+      return;
+    }
+    else
+    {
+      Serial.print("Message is decoded: ");
+      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+      parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+      if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
+      {
+        //Serial.println("Message did not come from BU");
+        IrReceiver.resume();
+        return;
+      }
+      else
+      {
+        if(!checkKnowledge(&bu))
+        {
+          Serial.println("Target location is not known by the BU.");
+        }
+        else
+        {
+          Serial.print("Target location is known from base unit: ");
+          Serial.println(bu.uiBUTargetLocation);
+        }
+        IrReceiver.resume();
+        return;
+      }
+    }
+  }
+}
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation) //Creating messages in predetermined format for MUs
 {
   unsigned int message;
@@ -911,68 +950,38 @@ void taskRFIDRead(void *pvParameters) //Task for RFID Reader
       rfid.PCD_StopCrypto1();
     }
 }
-void taskSendMessageMU(void *pvParameters) //Task for Sending Message
+void taskCommunicate(void *pvParameters)
+{
+  while(1)
+  {
+    SendMessageMU();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    ReceiveMessageMU();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+void SendMessageMU(void)
 {
     unsigned int msg;
     unsigned short int address;
     unsigned char command;
 
-    while(1)
-    {
-      msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
-      command = (unsigned int)((msg & 0x00FF0000) >> 16);
-      address = (unsigned int)(msg & 0x0000FFFF);
-      /*address = 0x1111;
-      command = 0x31;*/
+    msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
+    command = (unsigned int)((msg & 0x00FF0000) >> 16);
+    address = (unsigned int)(msg & 0x0000FFFF);
+    /*address = 0x1111;
+    command = 0x31;*/
 
-      //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-      IrSender.sendNEC(address, command, 0);
-      vTaskDelay(200 / portTICK_PERIOD_MS);
-    }
+    //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
+    //for(int i=0; i<10; i++) {
+
+    IrSender.sendNEC(address, command, 0);
+    //}
+    //vTaskDelay(10 / portTICK_PERIOD_MS);
+
 }
 
-void taskReceiveMessageMU(void *pvParameters)
-{
-  while(1)
-  {
-    if(!IrReceiver.decodeNEC())
-    {
-      IrReceiver.resume();
-    }
-    else
-    {
-      if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
-      {
-        Serial.println("Message is lost. Wait for the new receivement.");
-        IrReceiver.resume();
-      }
-      else
-      {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-        parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-        if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
-        {
-          //Serial.println("Message did not come from BU");
-          IrReceiver.resume();
-        }
-        else
-        {
-          if(!checkKnowledge(&bu))
-          {
-            Serial.println("Target location is not known by the BU.");
-          }
-          else
-          {
-            Serial.print("Target location is known from base unit: ");
-            Serial.println(bu.uiBUTargetLocation);
-          }
-          IrReceiver.resume();
-        }
-      }
-    }
-  }
-}
+
 
 void taskMovementMotor(void *pvParameters)
 {

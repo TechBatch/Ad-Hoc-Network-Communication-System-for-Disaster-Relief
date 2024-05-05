@@ -249,6 +249,8 @@ int checkDecode(unsigned int rawdata);
 int checkHeader(BU* bu);
 void setFinding(MU* mu);
 int checkKnowledge(BU* bu);
+void SendMessageMU(void);
+void ReceiveMessageMU(void);
 /**************GYRO FUNC DEF*************/
 void dmpDataReady(void);
 
@@ -263,5 +265,4 @@ void rotate(void);
 /*************TASKS DEF************/
 void taskMotorControl(void *pvParameters);
 void taskRFIDRead(void *pvParameters);
-void taskSendMessageMU(void *pvParameters);
-void taskReceiveMessageMU(void *pvParameters);
+void taskCommunicate(void *pvParameters);

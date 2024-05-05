@@ -144,7 +144,7 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define BU_TRANSMITTER         33
+#define BU_TRANSMITTER         32
 #define BU_RECEIVER            26
 
 
@@ -184,8 +184,9 @@ typedef struct BU_STRUCT
 unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiRange, unsigned int uiKnowing, unsigned int uiTargetLocation);
 void parseMessageBU(unsigned int message); //BU parses the message coming from MU
 
-void taskSendMessageBU(void *pvParameters); //Message sent by BU
-void taskReceiveMessageBU(void *pvParameters); //Message received by BU
+void taskCommunicate(void *pvParameters); //Message sent by BU
+void SendMessageBU(void); //Message sent by BU
+void ReceiveMessageBU(void); //Message received by BU
 
 unsigned int getHeader(unsigned int rawdata);
 int checkFinding(MU* mu);

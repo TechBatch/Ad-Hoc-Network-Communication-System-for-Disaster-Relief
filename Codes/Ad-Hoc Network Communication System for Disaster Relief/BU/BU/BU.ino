@@ -35,26 +35,24 @@ void setup()
     1,                    // Priority
     NULL                 // Task handle
   );*/
-  xTaskCreate(
-    taskSendMessageBU,        // Task function
-    "MessageSenderTask",   // Task name
-    2048,                // Stack size (in words)
+  /*xTaskCreate(
+    taskCommunicate,        // Task function
+    "CommunicationTask",   // Task name
+    4096,                // Stack size (in words)
     NULL,                 // Task input parameter
     1,                    // Priority
     NULL                 // Task handle
-  );
-  xTaskCreate(
-    taskReceiveMessageBU,        // Task function
-    "MessageReceiverTask",   // Task name
-    2048,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    1,                    // Priority
-    NULL                 // Task handle
-  );
+  );*/
 }
 
 
-void loop() {  
+void loop() { 
+
+  SendMessageBU();
+  vTaskDelay(10 / portTICK_PERIOD_MS);
+  ReceiveMessageBU();
+  vTaskDelay(10 / portTICK_PERIOD_MS);
+
 }
 /*********************************************************/
 /***************COMMUNICATION FUNCTIONS*******************/
@@ -192,10 +190,21 @@ void sayTargetLocation(BU* bu, MU* mu)
 /***************************TASKS*********************************************/
 
 /***************** COMMUNICATION *********************************************/
-void taskSendMessageBU(void *pvParameters) //BU continously send message that it has
+void taskCommunicate(void *pvParameters){
+  while(1) {
+
+    SendMessageBU();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    ReceiveMessageBU();
+    //vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+}
+
+void SendMessageBU(void) //BU continously send message that it has
 {
-  while(1)
-  {
+  //while(1)
+  //{
     unsigned int msg;
     unsigned short int address;
     unsigned char command;
@@ -205,92 +214,103 @@ void taskSendMessageBU(void *pvParameters) //BU continously send message that it
     command = (unsigned int)((msg & 0x00FF0000)>>16);
 
     IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
+    //vTaskDelay(10 / portTICK_PERIOD_MS);
+  //}
 }
 
-void taskReceiveMessageBU(void *pvParameters)
+void ReceiveMessageBU(void)
 {
-  while(1)
+  if(!IrReceiver.decodeNEC())
   {
-    if(!IrReceiver.decodeNEC())
+    IrReceiver.resume();
+    return;
+  }
+  else
+  { 
+    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
     {
+      Serial.println("Message is lost. Wait for the new receivement.");
       IrReceiver.resume();
+      return;
     }
     else
-    { 
-      if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+    {
+      Serial.print("Message is decoded: ");
+      Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX);
+      parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+      if(!checkHeader(IrReceiver.decodedIRData.decodedRawData))   //Check the header if wrong resume and return
       {
-        Serial.println("Message is lost. Wait for the new receivement.");
+        Serial.println("Message did not come from any MU");
         IrReceiver.resume();
+        return;
       }
       else
       {
-        Serial.print("Message is decoded: ");
-        Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX);
-        parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-        if(!checkHeader(IrReceiver.decodedIRData.decodedRawData))   //Check the header if wrong resume and return
+        switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
         {
-          Serial.println("Message did not come from any MU");
-          IrReceiver.resume();
-        }
-        else
-        {
-          switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
-          {
-            case 2: //MU1
-              Serial.println("Message is received from MU1");
-              currentLoc1 = mu1.uiMUCurrentLocation;
-              if(!checkFinding(&mu1))
-              {
-                Serial.println("MU1 does not know the location of target");
-              }
-              else
-              {
-                Serial.print("MU1 knows the target location: ");
-                Serial.println(mu1.uiMUTargetLocation, HEX);
-            
-                setKnowledgeBU(&bu);
-                sayTargetLocation(&bu, &mu1);
-              }
+          case 2: //MU1
+            Serial.println("Message is received from MU1");
+            currentLoc1 = mu1.uiMUCurrentLocation;
+            if(!checkFinding(&mu1))
+            {
+              Serial.println("MU1 does not know the location of target");
+              IrReceiver.resume();
+              return;
+            }
+            else
+            {
+              Serial.print("MU1 knows the target location: ");
+              Serial.println(mu1.uiMUTargetLocation, HEX);
+          
+              setKnowledgeBU(&bu);
+              sayTargetLocation(&bu, &mu1);
+            }
             break;
 
-            case 3: //MU2
-              Serial.println("Message is received from MU2");
-              currentLoc2 = mu2.uiMUCurrentLocation;
-              if(!checkFinding(&mu2))
-              {
-                Serial.println("MU does not know the location of target");
-              }
-              else
-              {
-                Serial.print("MU2 knows the target location: ");
-                Serial.println(mu2.uiMUTargetLocation, HEX);
-                
-                setKnowledgeBU(&bu);
-                sayTargetLocation(&bu, &mu2);
-              }
+          case 3: //MU2
+            Serial.println("Message is received from MU2");
+            currentLoc2 = mu2.uiMUCurrentLocation;
+            if(!checkFinding(&mu2))
+            {
+              Serial.println("MU does not know the location of target");
+              IrReceiver.resume();
+              return;
+            }
+            else
+            {
+              Serial.print("MU2 knows the target location: ");
+              Serial.println(mu2.uiMUTargetLocation, HEX);
+              
+              setKnowledgeBU(&bu);
+              sayTargetLocation(&bu, &mu2);
+            }
             break;
 
-            case 4: //MU3
-              Serial.println("Message is received from MU3");
-              currentLoc3 = mu3.uiMUCurrentLocation;
-              if(!checkFinding(&mu3))
-              {
-                Serial.println("MU does not know the location of target");
-              }
-              else
-              {
-                Serial.print("MU3 knows the target location: ");
-                Serial.println(mu3.uiMUTargetLocation, HEX);
-                
-                setKnowledgeBU(&bu);
-                sayTargetLocation(&bu, &mu3);
-              }
+          case 4: //MU3
+            Serial.println("Message is received from MU3");
+            currentLoc3 = mu3.uiMUCurrentLocation;
+            if(!checkFinding(&mu3))
+            {
+              Serial.println("MU does not know the location of target");
+              IrReceiver.resume();
+              return;
+            }
+            else
+            {
+              Serial.print("MU3 knows the target location: ");
+              Serial.println(mu3.uiMUTargetLocation, HEX);
+              
+              setKnowledgeBU(&bu);
+              sayTargetLocation(&bu, &mu3);
+            }
             break;
-          }
-          IrReceiver.resume();
+
+          default:
+            IrReceiver.resume();
+            break;
         }
+        IrReceiver.resume();
+        return;
       }
     }
   }
@@ -298,7 +318,6 @@ void taskReceiveMessageBU(void *pvParameters)
 
 
 /*****************DC MOTOR **********************************************/
-
 /*void taskMotorControl(void *pvParameters) 
 {
   while (true) 
