@@ -220,19 +220,14 @@ void SendMessageBU(void) //BU continously send message that it has
 
 void ReceiveMessageBU(void)
 {
-  if(!IrReceiver.decodeNEC())
+  if(IrReceiver.decodeNEC())
   {
-    IrReceiver.resume();
-    return;
-  }
-  else
-  { 
     if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
-    {
-      Serial.println("Message is lost. Wait for the new receivement.");
-      IrReceiver.resume();
-      return;
-    }
+      {
+        Serial.println("Message is lost. Wait for the new receivement.");
+        IrReceiver.resume();
+        return;
+      }
     else
     {
       Serial.print("Message is decoded: ");
@@ -314,6 +309,8 @@ void ReceiveMessageBU(void)
       }
     }
   }
+  IrReceiver.resume();
+  return;
 }
 
 

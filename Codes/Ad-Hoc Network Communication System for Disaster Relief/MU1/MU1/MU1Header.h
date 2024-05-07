@@ -174,8 +174,8 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU_TRANSMITTER         32 /*****************WARNING*****MOTOR DRIVER****************/
-#define MU_RECEIVER            26
+#define MU_TRANSMITTER         32 
+#define MU_RECEIVER            27
 
 /*************************************************/
 /*******************MOTOR PINS********************/
@@ -209,7 +209,7 @@
 #define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
 #define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
 #define AIN2 4 // ESP32 Pin D14 to TB6612FNG Pin AIN2
-#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+#define BIN2 26 // ESP32 Pin D27 to TB6612FNG Pin BIN2
 #define PWMA 15 // ESP32 Pin D26 to TB6612FNG Pin PWMA
 #define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
 #define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY

@@ -27,6 +27,9 @@ VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measur
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
 
+long duration;
+float distanceCm;
+
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -229,15 +232,6 @@ void setup() {
     NULL,                 // Task handle
     APP_CPU_NUM
   );
-  xTaskCreatePinnedToCore(
-    taskRFIDRead,        // Task function
-    "RFIDReaderTask",   // Task name
-    4096,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    NULL,                    // Priority
-    NULL,                 // Task handle
-    APP_CPU_NUM
-  );
 }
 
 void loop() {
@@ -260,12 +254,7 @@ void loop() {
 /****************COMMUNICATION FUNCTIONS*****************/
 void ReceiveMessageMU(void)
 {
-  if(!IrReceiver.decodeNEC())
-  {
-    IrReceiver.resume();
-    return;
-  }
-  else
+  if(IrReceiver.decodeNEC())
   {
     if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
     {
@@ -300,6 +289,8 @@ void ReceiveMessageMU(void)
       }
     }
   }
+  IrReceiver.resume();
+  return;
 }
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation) //Creating messages in predetermined format for MUs
 {
@@ -777,23 +768,23 @@ int encode_direction(int last_loc,int current_loc, int old_diff){
   int diff = current_loc - last_loc;
   
   if ((diff == -1 &&  old_diff == 1) || (diff == -10 &&  old_diff == 10) || (diff == 1 &&  old_diff == -1) || (diff == 10 &&  old_diff == -10)){
-    Serial.print("U_turn: ");
-    Serial.println(last_loc);
+    // Serial.print("U_turn: ");
+    // Serial.println(last_loc);
     is_backward = !is_backward;
     return 3;
   }
 
   else if ((diff == 10 &&  old_diff == 1) || (diff == -1 &&  old_diff == 10) || (diff == -10 &&  old_diff == -1) || (diff == 1 &&  old_diff == -10)){
     if(is_backward){
-      Serial.print("Right: ");
-      Serial.println(last_loc);
+      // Serial.print("Right: ");
+      // Serial.println(last_loc);
       is_backward = !is_backward;
       return 2;
 
     }
     else{
-      Serial.print("Left: ");
-      Serial.println(last_loc);
+      // Serial.print("Left: ");
+      // Serial.println(last_loc);
       return 1;
     }
     
@@ -801,20 +792,20 @@ int encode_direction(int last_loc,int current_loc, int old_diff){
 
   else if((diff == 10 &&  old_diff == -1) || (diff == 1 &&  old_diff == 10) || (diff == -10 &&  old_diff == 1) || (diff == -1 &&  old_diff == -10)) {
     if(is_backward){
-      Serial.print("Left: ");
-      Serial.println(last_loc);
+      // Serial.print("Left: ");
+      // Serial.println(last_loc);
       is_backward = !is_backward;
       return 1;
     }
     else{
-      Serial.print("Right: ");
-      Serial.println(last_loc);
+      // Serial.print("Right: ");
+      // Serial.println(last_loc);
       return 2;
     }
   }
 
   if (last_loc == stop_list && flag_dur == true){
-    Serial.print("Stop");
+    // Serial.print("Stop");
     return 4;
   }
 
@@ -924,32 +915,6 @@ void dmpDataReady() {
   }
 }*/
 
-void taskRFIDRead(void *pvParameters) //Task for RFID Reader
-{
-    while(1)
-    {
-      // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-      if (!rfid.PICC_IsNewCardPresent()) 
-      {
-        mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
-        continue;
-      }
-      // Verify if the NUID has been readed
-      if ( !rfid.PICC_ReadCardSerial()) {
-        continue;
-      }
-
-    
-      // Store NUID into nuidPICC array
-      for (byte i = 0; i < 4; i++) {
-        nuidPICC[i] = rfid.uid.uidByte[i];
-      }
-
-      
-      // Stop encryption on PCD
-      rfid.PCD_StopCrypto1();
-    }
-}
 void taskCommunicate(void *pvParameters)
 {
   while(1)
@@ -998,7 +963,7 @@ void taskMovementMotor(void *pvParameters)
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             angle = ypr[0] * 180/M_PI; //yaw (angle wrt z-axis) 
-            Serial.println(angle);
+            // Serial.println(angle);
         #endif
 
         #ifdef OUTPUT_READABLE_REALACCEL
@@ -1039,8 +1004,18 @@ void taskMovementMotor(void *pvParameters)
         PID_backward();
       }
 
-      if(is_left == false && is_right == false){ // && is_backward_after_rotate==false
+      // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+      if (!rfid.PICC_IsNewCardPresent()) 
+      {
+        continue;
+      }
+      // Verify if the NUID has been readed
+      if ( !rfid.PICC_ReadCardSerial()) {
+        continue;
+      }
 
+      if(is_left == false && is_right == false){ // && is_backward_after_rotate==false
+        mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
         Serial.print("Card num:");
         Serial.println(mu.uiMUCurrentLocation);
 
@@ -1048,7 +1023,7 @@ void taskMovementMotor(void *pvParameters)
           continue;
         }
         
-        
+        /*
         if((setup_path == true) && (mu.uiMUCurrentLocation !=  UNKNOWN)){
           if(flag_first_pos  == true){
             first_position = mu.uiMUCurrentLocation;
@@ -1063,7 +1038,7 @@ void taskMovementMotor(void *pvParameters)
           
             //Grid g = createSubGrid(3,0,84,0);
 
-            Serial.println("Before path");
+            // Serial.println("Before path");
 
             path = func(g,second_position+12);
             for (int& elem : path) {
@@ -1145,7 +1120,7 @@ void taskMovementMotor(void *pvParameters)
                   }
                   
                   path.erase(path.begin());
-                  Serial.print("Left U");
+                  // Serial.print("Left U");
                   
 
                   brake(motor_left, motor_right); 
@@ -1177,7 +1152,7 @@ void taskMovementMotor(void *pvParameters)
                   }
 
                   path.erase(path.begin());
-                  Serial.print("Right U");
+                  // Serial.print("Right U");
                   brake(motor_left, motor_right); 
                   vTaskDelay(1000 / portTICK_PERIOD_MS);              
                   target -= 180;
@@ -1238,9 +1213,10 @@ void taskMovementMotor(void *pvParameters)
               }
             }
           }
-        }
+        }*/
       }
       
     }
+    rfid.PCD_StopCrypto1();
   }
 }
