@@ -133,7 +133,6 @@ int card_num_old = 0;
 
 
 void setup() {
-
   /************I2C & MPU***********/
   Serial.begin(115200);
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -225,6 +224,7 @@ void setup() {
     "MovementControllerTask",   // Task name
     4096,                // Stack size (in words)
     NULL,                 // Task input parameter
+    //tskIDLE_PRIORITY,                    // Priority    
     1,                    // Priority
     NULL,                 // Task handle
     APP_CPU_NUM
@@ -234,6 +234,7 @@ void setup() {
     "RFIDReaderTask",   // Task name
     4096,                // Stack size (in words)
     NULL,                 // Task input parameter
+    //tskIDLE_PRIORITY,                    // Priority
     NULL,                    // Priority
     NULL,                 // Task handle
     APP_CPU_NUM
@@ -952,12 +953,28 @@ void taskRFIDRead(void *pvParameters) //Task for RFID Reader
 }
 void taskCommunicate(void *pvParameters)
 {
+  unsigned long int initialState = 0;
+  unsigned long int interval = 10;
+  bool flag = 1;
+  unsigned long int currentState;
   while(1)
   {
-    SendMessageMU();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    ReceiveMessageMU();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    currentState = millis();
+    if(currentState-initialState >= interval)
+    {
+      flag = !flag;
+      initialState = currentState;
+    }
+    
+    if(flag)
+    {
+      SendMessageMU();
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    else
+    {
+      ReceiveMessageMU();
+    }
   }
 }
 void SendMessageMU(void)

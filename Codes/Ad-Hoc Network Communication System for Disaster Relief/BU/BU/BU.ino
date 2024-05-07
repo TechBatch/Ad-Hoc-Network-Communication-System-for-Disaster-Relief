@@ -1,5 +1,10 @@
 #include "BUHeader.h"
 
+unsigned long int initialState = 0;
+unsigned long int interval = 10;
+bool flag = 1;
+unsigned long int currentState;
+
 /******COMMUNICATION INIT******/
 MU mu1;
 MU mu2;
@@ -10,8 +15,10 @@ unsigned int currentLoc1;
 unsigned int currentLoc2;
 unsigned int currentLoc3;
 
+
 void setup() 
 {
+
   mu1.uiMUHeader = MU1_NAME;
   mu2.uiMUHeader = MU2_NAME;
   mu3.uiMUHeader = MU3_NAME;
@@ -48,10 +55,23 @@ void setup()
 
 void loop() { 
 
-  SendMessageBU();
-  vTaskDelay(10 / portTICK_PERIOD_MS);
-  ReceiveMessageBU();
-  vTaskDelay(10 / portTICK_PERIOD_MS);
+    currentState = millis();
+    if(currentState-initialState >= interval)
+    {
+      flag = !flag;
+      initialState = currentState;
+    }
+
+    if(flag)
+    {
+      SendMessageBU();
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+
+    }
+    else
+    {
+      ReceiveMessageBU();
+    }
 
 }
 /*********************************************************/
@@ -190,7 +210,7 @@ void sayTargetLocation(BU* bu, MU* mu)
 /***************************TASKS*********************************************/
 
 /***************** COMMUNICATION *********************************************/
-void taskCommunicate(void *pvParameters){
+/*void taskCommunicate(void *pvParameters){
   while(1) {
 
     SendMessageBU();
@@ -199,7 +219,7 @@ void taskCommunicate(void *pvParameters){
     //vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 
-}
+}*/
 
 void SendMessageBU(void) //BU continously send message that it has
 {
