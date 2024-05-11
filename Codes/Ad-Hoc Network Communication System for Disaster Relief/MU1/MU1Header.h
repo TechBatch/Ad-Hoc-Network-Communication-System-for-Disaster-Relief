@@ -59,7 +59,7 @@
 #define FIRST                   0x1
 #define SECOND                  0x2
 #define THIRD                   0x3
-#define INIT                    0x4
+#define INIT                    0x0
 
 #define MU1_FOUND               0x1
 #define MU2_FOUND               0x2
