@@ -33,11 +33,8 @@ class Grid
     private:
         // Tiles of grid
         std::vector<Tile> tiles;
-
         // Edge number
         int N;
-
-
 
     public:
 
