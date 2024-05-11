@@ -1,5 +1,8 @@
 #include "MU1Header.h"
 
+int FoundInfo = 0;
+int QueueID = 0;
+int march = 0;
 //MU HAS 2 BIT INFO SPACE AS RECEIVEMENT IT IS NOT USE
 /*****************************/
 /******RFID DECLARATIONS******/
@@ -16,17 +19,15 @@ MU mu;
 BU bu;
 
 /******************************/
-/**********GYRO INIT**********/
+/******************************/
 
 MPU6050 mpu;
 MPU6050 accelgyro;
-// orientation/motion vars
-Quaternion q;           // [w, x, y, z]         quaternion container
-VectorInt16 aa;         // [x, y, z]            accel sensor measurements
-VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
-VectorFloat gravity;    // [x, y, z]            gravity vector
 
+long duration;
+float distanceCm;
+
+bool blinkState = false;
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -36,16 +37,18 @@ uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
+// orientation/motion vars
+Quaternion q;           // [w, x, y, z]         quaternion container
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 float angle;
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = { '$', 0x02, 0,0, 0,0, 0,0, 0,0, 0x00, 0x00, '\r', '\n' };
 float GyroX;
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-
-/*******************************/
-/********MOVEMENT INIT**********/
 
 float target = 0;
 float error = 0;
@@ -53,86 +56,92 @@ float integral = 0;
 float derivative = 0;
 float last_error = 0;
 float error_lu_angle = 0;
-
-//the 'k' values are the ones you need to fine tune before your program will work. Note that these are arbitrary values that you just need to experiment with one at a time.
-float Kp = 13;
-float Ki = 0.09;
-float Kd = 12;
-
 float targetAngle = 0;
+int target_location = 100; // Unknown
+int red = 14;
+int yellow = 32;
+int green = 26;
 
-const int maxSpeed = 80; //max PWM value written to motor speed pin. It is typically 255.
-const int minSpeed = 20;
-
-bool gradual_increase = false; 
-
-bool isDriving = false; //it the car driving forward OR rotate/stationary
-bool prevIsDriving = false; //equals isDriving in the previous iteration of void loop()
-bool paused = false;
-bool start = false;
-float mtrSpd = 110;
-int left_motor_fast = 90;
-int right_motor_fast = 65;
-double input, output, setpoint;
-bool left_turn = false;
-bool right_turn = false;
-int ne = 3; 
 bool dur = false;
+int card_num = 0;
+int old_card_num;
 bool is_forward = true;
 bool is_right = false;
 bool is_left = false;
 bool is_backward = false;
 int last_loc_glob;
+
 int current_loc_glob;
 int old_diff_glob;
 int diff_glob;
-int u_diff;
-int future_loc_glob;
 int direction_glob; //0: forward, 1:left, 2:right, 3:u
-int direction_future_glob; //0: forward, 1:left, 2:right, 3:u
 bool flag_stop_card = false;
+bool cross_error = false;
+int cross_loc; 
+bool error_path_setup = false;
+
+volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+
 const int offsetA = 1;
 const int offsetB = 1;
 
-//int right_list[] = {52, 57, 7};
-//int left_list[] = {-1};
-//int right_u_turn_list[] = {-1};
-//int left_u_turn_list[] = {-1};
-//int stop_list = 2;
-
 vector<int>path;
-
-//int right_list[] = {46, 64};
-//int left_list[] = {37, 55};
-//int right_u_turn_list[] = {42, 62};
-//int left_u_turn_list[] = {77, 75};
-//int stop_list = 73;
+vector<int>old_path;
 bool flag_dur = false;
-int forward_list[] = {1,2,3,4};
 
 Motor motor_left = Motor(AIN1, AIN2, PWMA, offsetA, STBY,5000 ,8,1 );
 Motor motor_right = Motor(BIN1, BIN2, PWMB, offsetB, STBY,5000 ,8,2 );
 
 
-int first_position = 0;
-int second_position = 0; 
+int first_position = UNKNOWN;
+int second_position = UNKNOWN; 
 bool setup_path = true;
 bool flag_first_pos = true;
 bool flag_second_pos = false;
-float Kp_backward = 4;
-float Ki_backward = 0.04;
-float Kd_backward = 3.5;
-float mtrSpd_backward = 95;
 int stop_list;
-bool road_is_empty=true;
 bool is_backward_after_rotate = false;
 bool flag_is_backward_after_rotate = true;
 int current_time_backward;
-Grid g = createSubGrid(3, 49, 66, 86, 75);
-int card_num_old = 0;
+int card_num_under_target;
+bool found_target = false;
+bool return_base = false;
+int time_zero = INT_MAX;
+int cum_angle = 0;
+float step_size;
+int step_index = 0;
+int init_phase = 0;
+int error_case = 4;
+int time_first;
+bool error_setup_path = false;
 
+// ==============================================
+// ===               Sub Grid                 ===
+// ==============================================
+
+int MU_number = 1;
+Grid g = createSubGrid(1, 0, 0, 0, 0);
+Grid g_global = Grid(81);
+float step_size_vec[13] = {5, -10, 15, -20, 25, -30, 35, -40, 45, -50, 55, -60, 65};
+
+// ==============================================
+// ===               PID TUNING               ===
+// ==============================================
+
+float Kp_backward = 4;
+float Ki_backward = 0.04;
+float Kd_backward = 3.5;
+float Kp = 8;
+float Ki = 0.05;
+float Kd = 12;
+float mtrSpd_r = 120;
+float mtrSpd_l = 100;
+float mtrSpd_backward_r = 120;
+float mtrSpd_backward_l = 100;
+int left_motor_fast = 100;
+int right_motor_fast = 100;
 
 void setup() {
+
   /************I2C & MPU***********/
   Serial.begin(115200);
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -149,13 +158,37 @@ void setup() {
   pinMode(INTERRUPT_PIN, INPUT);
 
   devStatus = mpu.dmpInitialize();
-
+  if(MU_number == 1){
+    mpu.setXAccelOffset(435.00000); 
+    mpu.setYAccelOffset(-319.00000); 
+    mpu.setZAccelOffset(5210.00000); 
+    mpu.setXGyroOffset(128.00000);
+    mpu.setYGyroOffset(-19.00000);
+    mpu.setZGyroOffset(18.00000);
+  }
+  else if(MU_number == 2){
+    mpu.setXAccelOffset(-1125.00000); 
+    mpu.setYAccelOffset(-1413.00000); 
+    mpu.setZAccelOffset(4301.00000); 
+    mpu.setXGyroOffset(17.00000);
+    mpu.setYGyroOffset(249.00000);
+    mpu.setZGyroOffset(20.00000);
+  }
+  else {
+    mpu.setXAccelOffset(-1223.00000); 
+    mpu.setYAccelOffset(-1275.00000); 
+    mpu.setZAccelOffset(4309.00000); 
+    mpu.setXGyroOffset(19.00000);
+    mpu.setYGyroOffset(323.00000);
+    mpu.setZGyroOffset(38.00000);
+  }
   mpu.setXAccelOffset(-1223.00000); 
   mpu.setYAccelOffset(-1275.00000); 
   mpu.setZAccelOffset(4309.00000); 
   mpu.setXGyroOffset(19.00000);
   mpu.setYGyroOffset(323.00000);
   mpu.setZGyroOffset(38.00000);
+
   // 1688 factory default for my test chip
 
   if (devStatus == 0) {
@@ -173,6 +206,8 @@ void setup() {
 
       // get expected DMP packet size for later comparison
       packetSize = mpu.dmpGetFIFOPacketSize();
+  }else {
+      int a=0;
   }
 
   /************RFID***************/
@@ -195,22 +230,19 @@ void setup() {
   pinMode(PIN_IN2, OUTPUT);
   pinMode(PIN_ENA, OUTPUT);*/
 
+
+/******************LED***********************/
+  //pinMode(yellow, OUTPUT); // yellow
+  //pinMode(green, OUTPUT); // green
+  //pinMode(red, OUTPUT); // red
   /******************COMMUNICATION*****************/
   IrReceiver.begin(MU_RECEIVER);
   pinMode(MU_TRANSMITTER, OUTPUT);
   IrSender.begin(MU_TRANSMITTER);
 
   /*****************TASK CREATIONS*****************/
-  /*xTaskCreate(
-    taskMotorControl,     // Task function
-    "MotorControlTask",   // Task name
-    2048,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    1,                    // Priority
-    NULL                 // Task handle
-  );*/
   xTaskCreatePinnedToCore(
-    taskCommunicate,        // Task function
+    taskSendMessage,        // Task function
     "CommunicationTask",   // Task name
     4096,                // Stack size (in words)
     NULL,                 // Task input parameter
@@ -220,22 +252,11 @@ void setup() {
     PRO_CPU_NUM
   );
   xTaskCreatePinnedToCore(
-    taskMovementMotor,        // Task function
+    taskReceiveMessage,        // Task function
     "MovementControllerTask",   // Task name
     4096,                // Stack size (in words)
     NULL,                 // Task input parameter
-    //tskIDLE_PRIORITY,                    // Priority    
     1,                    // Priority
-    NULL,                 // Task handle
-    APP_CPU_NUM
-  );
-  xTaskCreatePinnedToCore(
-    taskRFIDRead,        // Task function
-    "RFIDReaderTask",   // Task name
-    4096,                // Stack size (in words)
-    NULL,                 // Task input parameter
-    //tskIDLE_PRIORITY,                    // Priority
-    NULL,                    // Priority
     NULL,                 // Task handle
     APP_CPU_NUM
   );
@@ -255,53 +276,371 @@ void loop() {
   // // Calculate the distance
   // distanceCm = duration * SOUND_SPEED/2;
 
+  /*
+    Serial.print("Error: ");
+    Serial.println(error_case);
+    
+    // if(distanceCm < 10){
+    //   brake(motor_left, motor_right); 
+    //   delay(1000);
+    //   return;
+    // }
+  */
+
+  if (!dmpReady){
+    return;
+  } 
+  // read a packet from FIFO
+  if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
+      #ifdef OUTPUT_READABLE_YAWPITCHROLL
+          // display Euler angles in degrees
+          mpu.dmpGetQuaternion(&q, fifoBuffer);
+          mpu.dmpGetGravity(&gravity, &q);
+          mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+
+          angle = ypr[0] * 180/M_PI; //yaw (angle wrt z-axis) 
+          angle = angle - cum_angle;
+          //Serial.println(angle);
+      #endif
+
+      #ifdef OUTPUT_READABLE_REALACCEL
+          accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+          
+
+          GyroX = -gz; //kullanmıyoz sil
+
+          
+      #endif
+  }
+
+  if(setup_path){
+
+    if(flag_first_pos){
+      time_zero = millis();
+    }
+
+    if(((millis() - time_zero)> 800) && (error_case == 4)){
+      brake(motor_left, motor_right); 
+      delay(300);
+      is_forward = false;
+      is_backward = true;
+      error_case = 5;
+    }
+
+    if (is_forward){
+      //Serial.println("forward");
+      PID_forward();
+    }
+
+    if(is_backward){
+      PID_backward();
+      time_zero = millis();
+    }
+
+
+    if((error_case == 0)){ // Step by step find direction
+      last_error = 0;
+      integral = 0;
+      rotate_degree(step_size);
+    }
+
+    if ( ! rfid.PICC_IsNewCardPresent()) {
+      return;
+    }
+    if ( ! rfid.PICC_ReadCardSerial()) {
+      return;
+    }
+    
+    mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
+    
+    if((mu.uiMUCurrentLocation == first_position) && (error_case == 5)){
+      brake(motor_left, motor_right); 
+      delay(300);
+      is_forward = false;
+      is_backward = false;
+      time_zero = millis();
+      error_case = 0;
+      if(step_index > 12){
+        step_index = 0;
+      }
+      step_size = step_size_vec[step_index];
+      step_index += 1;
+    }
+
+    if((setup_path) && (mu.uiMUCurrentLocation != 100)){
+      if(flag_first_pos){
+        first_position = mu.uiMUCurrentLocation;
+        flag_first_pos = false;
+        flag_second_pos = true;
+        time_zero = millis();
+        error_case = 4;
+        return;
+      }
+      if((flag_second_pos) && mu.uiMUCurrentLocation != first_position){ 
+        second_position = mu.uiMUCurrentLocation;
+        flag_second_pos = false;
+        brake(motor_left, motor_right); 
+      
+        //Grid g = createSubGrid(3,0,84,0);
+        if(error_setup_path && !return_base){
+          for (int& elem : old_path) {
+            g.changeTileStatus(elem, Visited::VISITED);
+          }
+          old_path.clear();
+          path = func(g,second_position);
+          stop_list = path.back();
+          error_setup_path = false;
+        }
+        else if(return_base){
+          path = g.calculatePath(second_position, 1);
+          stop_list = path.back();
+          error_setup_path = false;
+        }
+        else{
+          //g.changeTileStatus(first_position, Visited::VISITED);
+          path = func(g,second_position);
+          stop_list = path.back();
+        }
+        for (int& elem : path) {
+          Serial.println(elem);
+        }
+        setup_path = false; 
+        old_diff_glob = second_position - first_position;
+        time_zero = millis();
+        error_case = 4;
+        step_index = 0;
+        old_path.push_back(first_position);
+        is_forward = false;
+        is_backward = false;
+      }
+    }
+  }
+
+  if(!dur && !setup_path) {
+    
+    if(((millis() - time_zero)> 700) && (error_case == 4)){ // || (error_case == 3)
+      Serial.println("timeout");
+      brake(motor_left, motor_right); 
+      delay(300);
+      is_forward = false;
+      is_backward = true;
+      error_case = 5;
+    }
+    /**/
+
+    /**/
+    if (is_forward){
+      //Serial.println("forward");
+      PID_forward();
+    }
+    else if (is_left == true || is_right == true){
+      last_error = 0;
+      integral = 0;
+      rotate();
+      time_zero = millis();
+    }
+    else if(is_backward){
+      Serial.println("backward");
+      PID_backward();
+      time_zero = millis();
+    }
+
+    if((error_case == 0) && false){ // Cross Error 45 degree probably
+      Serial.println("cross_error");
+      int cross_step = encode_cross_direction(cross_loc, path[0], path[1]);
+      rotate_degree(cross_step);
+    }
+    else if((error_case == 0) || (error_case == 2)){ // Step by step find direction
+      last_error = 0;
+      integral = 0;
+      Serial.println("random error");
+      rotate_degree(step_size);
+    }
+
+    /*
+    else if(is_backward_after_rotate){
+      if(flag_is_backward_after_rotate){
+        current_time_backward = millis();
+        flag_is_backward_after_rotate = false;
+      }
+      else if((current_time_backward + 150) < millis()){
+        is_forward = true;
+        is_backward_after_rotate = false;
+        flag_is_backward_after_rotate = true;
+      }
+      //PID_backward();
+    }
+    */
+
+    
+    if ( ! rfid.PICC_IsNewCardPresent()) {
+      return;
+    }
+    if ( ! rfid.PICC_ReadCardSerial()) {
+      return;
+    }
+
+    mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
+    Serial.print("Card num:");
+    Serial.println(mu.uiMUCurrentLocation);
+    time_zero = millis();
+
+    if(found_target){
+      if((mu.uiMUCurrentLocation != TARGET)){
+        Serial.println("targetin altindaki karti okuduk");
+        mu.uiMUTargetLocation = mu.uiMUCurrentLocation;
+        
+        //Grid g = createSubGrid(3,0,84,0);
+        path.clear();
+        path = g.calculatePath(mu.uiMUTargetLocation, 1);
+        for (int& elem : path) {
+          Serial.println(elem);
+        }
+        stop_list = path.back();
+        //path.insert(path.begin(), last_loc);
+        found_target = false;
+        return_base = true;
+        time_zero = millis();
+        old_card_num = mu.uiMUCurrentLocation;
+      }
+      else{
+        time_zero = millis();
+        Serial.println("targeti tekrar okuduk");
+        return;
+      }
+    }
+
+
+
+    if(mu.uiMUCurrentLocation == path[0]){
+      Serial.println("araba pathde");
+      flag_is_backward_after_rotate = true;
+      is_backward_after_rotate = false;
+      last_loc_glob = path[0];
+      current_loc_glob = path[1];
+      time_zero = millis();
+      
+      if(error_case==5){
+        is_backward = !is_backward;
+        is_forward = !is_forward;
+      }
+      direction_glob = encode_direction(last_loc_glob, current_loc_glob, old_diff_glob); //0: forward, 1: left, 2: right, 3: u, 4: stop
+      old_diff_glob = current_loc_glob - last_loc_glob;
+
+      
+      old_path.push_back(path.front());
+      path.erase(path.begin());
+
+      if(direction_glob != 0){          
+        if(direction_glob == 1){ //Left turn
+          Serial.println("left");
+          brake(motor_left, motor_right); 
+          delay(1000);              
+          target += 90;
+          if (target > 180){
+            target -= 360;
+          }
+          is_left = true;
+          is_forward = false;
+          flag_dur = true;
+
+          
+        }
+        else if(direction_glob == 2){ //Right turn
+          Serial.println("right");
+          brake(motor_left, motor_right); 
+          delay(1000);
+          target -= 90;
+          if (target <= -180){
+            target += 360;
+          }
+          is_right = true;
+          is_forward = false;
+          flag_dur = true;
+        }
+        else if(direction_glob == 3){
+          Serial.println("backward direc");
+          brake(motor_left, motor_right); 
+          delay(1000);
+          is_forward = false;
+        }
+        else if(direction_glob == 4){
+          Serial.println("dur");
+          brake(motor_left, motor_right); 
+          dur = true;
+        }
+        time_zero = millis();
+      }
+      else{
+        time_zero = millis();
+        Serial.println("forward devam");
+        //is_forward = true;
+      }
+      old_card_num = mu.uiMUCurrentLocation;
+      time_zero = millis();
+      error_case = 4;
+      step_index = 0;
+      
+    }
+    else{
+      if((error_case == 5) && (old_card_num == mu.uiMUCurrentLocation)) {
+        brake(motor_left, motor_right); 
+        delay(300);
+        time_zero = millis();
+        error_case = 0;
+        is_backward = false;
+        if(step_index > 12){
+          step_index = 0;
+        }
+        step_size = step_size_vec[step_index];
+        step_index += 1;
+        rfid.PCD_StopCrypto1();
+        return;
+      }
+      if((old_card_num == mu.uiMUCurrentLocation)){
+        Serial.println("ayni kart");
+        time_zero = millis();
+        rfid.PCD_StopCrypto1();
+        return;
+      }
+      
+      if((TARGET == mu.uiMUCurrentLocation) && (!return_base)){
+        brake(motor_left, motor_right); 
+        delay(300);
+        //path.clear();
+        Serial.println("target bulundu");
+        found_target = true;
+        time_zero = millis();
+        return_base = true; 
+        //old_card_num = mu.uiMUCurrentLocation;
+        rfid.PCD_StopCrypto1();
+        return;
+      }
+      if(mu.uiMUCurrentLocation == TARGET){
+        time_zero = millis();
+        rfid.PCD_StopCrypto1();
+        return;
+      }
+      else{
+        Serial.println("reset atiyoz");
+        brake(motor_left, motor_right); 
+        reset_global_var();
+        error_path_setup = true;
+        setup_path = true;
+        path.clear();
+        time_zero = millis();
+      }
+      
+      /**/
+    }
+  }
+  rfid.PCD_StopCrypto1();
 }
 
 /********************************************************/
 /****************COMMUNICATION FUNCTIONS*****************/
-void ReceiveMessageMU(void)
-{
-  if(!IrReceiver.decodeNEC())
-  {
-    IrReceiver.resume();
-    return;
-  }
-  else
-  {
-    if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
-    {
-      Serial.println("Message is lost. Wait for the new receivement.");
-      IrReceiver.resume();
-      return;
-    }
-    else
-    {
-      Serial.print("Message is decoded: ");
-      Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-      parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
-      if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
-      {
-        //Serial.println("Message did not come from BU");
-        IrReceiver.resume();
-        return;
-      }
-      else
-      {
-        if(!checkKnowledge(&bu))
-        {
-          Serial.println("Target location is not known by the BU.");
-        }
-        else
-        {
-          Serial.print("Target location is known from base unit: ");
-          Serial.println(bu.uiBUTargetLocation);
-        }
-        IrReceiver.resume();
-        return;
-      }
-    }
-  }
-}
+
 unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiFinding, unsigned int uiCurrentLocation, unsigned int uiTargetLocation) //Creating messages in predetermined format for MUs
 {
   unsigned int message;
@@ -314,24 +653,40 @@ void parseMessageMU(unsigned int message) //Parsing the messages that come from 
 {
   unsigned int uiHeader = (message & 0x00F00000) >> 20;
   unsigned int uiReceivement = (message & 0x000F0000) >> 16; // NO USE
-  unsigned int uiRange = (message & 0x0000F000) >> 12;        //NO USE
-  unsigned int uiKnowing = (message & 0x00000F00) >> 8;
+  unsigned int uiTalk = (message & 0x0000F000) >> 12;        //NO USE
+  unsigned int uiWhoFound = (message & 0x00000C00) >> 10;
+  unsigned int uiQueue = (message & 0x00000300) >> 8;
   unsigned int uiTargetLocation = (message & 0x000000FF) >> 0;
   
   if(uiHeader == BU_NAME)
   {
     Serial.print("Header: ");
     Serial.println(uiHeader, HEX);
-    Serial.print("Knowing: ");
-    Serial.println(uiKnowing, HEX);
+    Serial.print("Receivement: ");
+    Serial.println(uiReceivement, HEX);
+    Serial.print("Talk: ");
+    Serial.println(uiTalk, HEX);
+    Serial.print("Who Found: ");
+    Serial.println(uiWhoFound, HEX);
+    Serial.print("Queue: ");
+    Serial.println(uiQueue, HEX);
     Serial.print("Target Location: ");
     Serial.println(uiTargetLocation, HEX);
   }
   bu.uiBUHeader = uiHeader;
   bu.uiBUReceivement = uiReceivement;
-  bu.uiBURange = uiRange;
-  bu.uiBUKnowledge = uiKnowing;
+  bu.uiBUTalk = uiTalk;
+  bu.uiBUWhoFound = uiWhoFound;
+  bu.uiBUQueue = uiQueue;
   bu.uiBUTargetLocation = uiTargetLocation; 
+}
+
+void getWhoFound(BU* bu)
+{
+  if(bu->uiBUWhoFound != 0)
+  {
+    FoundInfo = bu->uiBUWhoFound;
+  }
 }
 
 int checkDecode(unsigned int rawdata) //Checks the decode for MU
@@ -344,17 +699,33 @@ int checkHeader(BU* bu)  //Compares the message header with BU header for MU
   return (bu->uiBUHeader == BU_NAME);
 }
 
-int checkKnowledge(BU* bu)
-{
-  return (bu->uiBUKnowledge == BU_TARGET_KNOWN);
-}
 
+int checkTalk(BU* bu)
+{
+  return (bu->uiBUTalk == mu.uiMUHeader);
+}
+void learnTargetLocation(MU* mu, BU* bu)
+{
+  if(bu->uiBUTargetLocation != UNKNOWN)
+  {
+    mu->uiMUTargetLocation = bu->uiBUTargetLocation;
+  }
+}
 
 void setFinding(MU* mu)
 {
   mu->uiMUFinding = (mu->uiMUCurrentLocation == 0x64) ? MU_TARGET_FOUND : MU_TARGET_NOT_FOUND;
 }
 
+int checkReceivement(BU* bu, MU* mu)
+{
+  return (bu->uiBUReceivement == (mu->uiMUHeader-1)); 
+}
+
+void setReceivement(MU* mu)
+{
+  mu->uiMUReceivement = MU_MSG_RECEIVED;
+}
 /***********************************************/
 /****************RFID FUNCTIONS*****************/
 
@@ -767,12 +1138,82 @@ int encodeRFID(byte *buffer) {
 
   else {
     //Serial.println("Unknown");
-    return UNKNOWN;
+    return TARGET;
   }
 }
 
 /***************************************************/
 /******************MOTOR FUNCTIONS******************/
+
+void rotate_degree(float target_correction){
+  float deltaangle = (target_correction - angle + target);
+
+  if ((target == 180) && (angle < 0)){
+    if(target_correction > 0){
+      deltaangle = (target - target_correction + angle);
+    }
+    else{
+      deltaangle = (360 - target - target_correction + angle);
+    }
+    
+  }
+  else if ((target == 180) && (angle > 0)){
+    if(target_correction > 0){
+      deltaangle = (360 + target - target_correction - angle);
+    }
+    else{
+      deltaangle = (target - target_correction - angle);
+    }
+  }
+
+
+  if (abs(deltaangle) <= 1){
+    brake(motor_left, motor_right); 
+    delay(300);
+    cum_angle = cum_angle + target_correction;
+    is_forward = true;
+    error_case = 4;
+    time_zero = millis();
+    Serial.println("rotate angle good");
+  } 
+  else if((target_correction) > 0){
+  
+    motor_left.brake();
+    motor_right.drive(right_motor_fast);
+  
+  }
+  else if((target_correction) < 0){
+  
+    motor_right.brake();
+    motor_left.drive(left_motor_fast);
+  
+  }
+}
+
+int error_in_path(int base_loc){
+
+  if(card_num == path[0]){
+    return 1; // MU is in the path
+  }
+  if((((base_loc - 10) == card_num) || ((base_loc + 10) == card_num) || ((base_loc - 1) == card_num) || ((base_loc + 1) == card_num))){
+    return 2; // MU's direction is known
+  }
+  if((((base_loc - 11) == card_num) || ((base_loc + 11) == card_num) || ((base_loc - 9) == card_num) || ((base_loc + 9) == card_num))){
+    return 3; // MU's direction is tilted
+  }
+  
+  return 4; //what is happening bro
+
+
+}
+
+int encode_cross_direction(int c, int p0, int p1){
+  if((((c-p1) == 1) && ((p1-p0) == 10)) || (((c-p1) == 10) && ((p1-p0) == -1)) || (((c-p1) == -1) && ((p1-p0) == -10)) || (((c-p1) == -10) && ((p1-p0) == 1))){
+    return 45;
+  }
+  return -45;
+}
+
 int encode_direction(int last_loc,int current_loc, int old_diff){
   
   int diff = current_loc - last_loc;
@@ -837,20 +1278,20 @@ void PID_forward(){
   error_lu_angle = (error * Kp) + (integral * Ki) + (derivative * Kd);  //derivative bastır derivative value negative değilse Kd negative olmalı -(abs(derivative*Kd)), burda işaretlerle ilgili bir karışıklık var bizim elimizdeki angleın işaretlerine bak
 
   if(error < 0){
-    motor_left.drive(constrain(mtrSpd+abs(error_lu_angle), 0, 255));
-    motor_right.drive(constrain(mtrSpd-abs(error_lu_angle), 0, 255));
+    motor_left.drive(constrain(mtrSpd_l+abs(error_lu_angle), 0, 255));
+    motor_right.drive(constrain(mtrSpd_r-abs(error_lu_angle), 0, 255));
   }
   
   else if(error > 0){ //setting the steering command if it is veering to the left
-    motor_left.drive(constrain(mtrSpd-abs(error_lu_angle), 0, 255));  //bazı yüksek ya da düşük errorlü değerlerleri kaybediyoz heralde buna ifli bir şey ekeleyebiliriz.
-    motor_right.drive(constrain(mtrSpd+abs(error_lu_angle), 0, 255));
+    motor_left.drive(constrain(mtrSpd_l-abs(error_lu_angle), 0, 255));  //bazı yüksek ya da düşük errorlü değerlerleri kaybediyoz heralde buna ifli bir şey ekeleyebiliriz.
+    motor_right.drive(constrain(mtrSpd_r+abs(error_lu_angle), 0, 255));
   }
   last_error = error;
 
 }
 
 void PID_backward(){
-  if(target == 180 && angle <0){
+  if(target == 180 && angle < 0){
     error = -target - angle;
   }
   else{
@@ -864,19 +1305,20 @@ void PID_backward(){
   error_lu_angle = (error * Kp_backward) + (integral * Ki_backward) + (derivative * Kd_backward);  //derivative bastır derivative value negative değilse Kd negative olmalı -(abs(derivative*Kd)), burda işaretlerle ilgili bir karışıklık var bizim elimizdeki angleın işaretlerine bak
 
   if(error < 0){
-    motor_left.drive(constrain(-mtrSpd_backward+abs(error_lu_angle), -255, 0));
-    motor_right.drive(constrain(-mtrSpd_backward-abs(error_lu_angle), -255, 0));
+    motor_left.drive(constrain(-mtrSpd_backward_l+abs(error_lu_angle), -255, 0));
+    motor_right.drive(constrain(-mtrSpd_backward_r-abs(error_lu_angle), -255, 0));
   }
   
   else if(error > 0){ //setting the steering command if it is veering to the left
-    motor_left.drive(constrain(-mtrSpd_backward-abs(error_lu_angle), -255, 0));  //bazı yüksek ya da düşük errorlü değerlerleri kaybediyoz heralde buna ifli bir şey ekeleyebiliriz.
-    motor_right.drive(constrain(-mtrSpd_backward+abs(error_lu_angle), -255, 0));
+    motor_left.drive(constrain(-mtrSpd_backward_l-abs(error_lu_angle), -255, 0));  //bazı yüksek ya da düşük errorlü değerlerleri kaybediyoz heralde buna ifli bir şey ekeleyebiliriz.
+    motor_right.drive(constrain(-mtrSpd_backward_r+abs(error_lu_angle), -255, 0));
   }
   last_error = error;
 
 }
 
-void rotate(void){
+
+void rotate (){
   int deltaangle = (target - angle);
 
   if ((target == 180) && (angle < 0)){
@@ -884,14 +1326,15 @@ void rotate(void){
   }
 
 
-  if (abs(deltaangle) <= 1){
+  if (abs(deltaangle) <= 1.0){
     brake(motor_left, motor_right); 
     delay(100);
     
     is_left = false;
     is_right = false;
     is_backward_after_rotate = true;
-    // is_forward = true;
+    time_zero = millis();
+    is_forward = true;
   } 
   else {
     if (is_left) { //turn left
@@ -902,8 +1345,27 @@ void rotate(void){
       motor_right.brake();
     }
   }
-} 
+}   
 
+void reset_global_var(){
+  is_forward = false;
+  is_right = false;
+  is_left = false;
+  is_backward = false;
+  targetAngle = 0;
+  error = 0;
+  integral = 0;
+  derivative = 0;
+  last_error = 0;
+  error_lu_angle = 0;
+  step_index = 0;
+  error_case = 4;
+  time_zero = millis();
+  flag_first_pos = true;
+  first_position = 0;
+  second_position = 0; 
+  flag_second_pos = false;
+}
 /***********************************************/
 /****************GYRO FUNCTIONS*****************/
 
@@ -914,91 +1376,68 @@ void dmpDataReady() {
 /***************************************************/
 /*******************TASK FUNCTIONS*****************/
 
-/*void taskMotorControl(void *pvParameters) //Task for DC motor
+void taskSendMessage(void *pvParameters)
 {
-  while (true) 
-  {
-    analogWrite(PIN_ENA, 100);
-    digitalWrite(PIN_IN1, HIGH); // Motorun yönünü saat yönünde kontrol et   
-    digitalWrite(PIN_IN2, LOW);  // Motorun yönünü saat yönünde kontrol et
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-}*/
-
-void taskRFIDRead(void *pvParameters) //Task for RFID Reader
-{
-    while(1)
-    {
-      // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-      if (!rfid.PICC_IsNewCardPresent()) 
-      {
-        mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
-        continue;
-      }
-      // Verify if the NUID has been readed
-      if ( !rfid.PICC_ReadCardSerial()) {
-        continue;
-      }
-
-    
-      // Store NUID into nuidPICC array
-      for (byte i = 0; i < 4; i++) {
-        nuidPICC[i] = rfid.uid.uidByte[i];
-      }
-
-      
-      // Stop encryption on PCD
-      rfid.PCD_StopCrypto1();
-    }
-}
-void taskCommunicate(void *pvParameters)
-{
-  unsigned long int initialState = 0;
-  unsigned long int interval = 10;
-  bool flag = 1;
-  unsigned long int currentState;
+  unsigned int msg;
+  unsigned short int address;
+  unsigned char command;
   while(1)
   {
-    currentState = millis();
-    if(currentState-initialState >= interval)
-    {
-      flag = !flag;
-      initialState = currentState;
-    }
-    
-    if(flag)
-    {
-      SendMessageMU();
-      vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-    else
-    {
-      ReceiveMessageMU();
-    }
-  }
-}
-void SendMessageMU(void)
-{
-    unsigned int msg;
-    unsigned short int address;
-    unsigned char command;
-
     msg = createMessageMU(mu.uiMUHeader, mu.uiMUReceivement, mu.uiMUFinding, mu.uiMUCurrentLocation, mu.uiMUTargetLocation);
     command = (unsigned int)((msg & 0x00FF0000) >> 16);
     address = (unsigned int)(msg & 0x0000FFFF);
-    /*address = 0x1111;
-    command = 0x31;*/
-
-    //IrSender.sendNEC(address,command,0);              //Send the message that is constructed from last infos in the MU struct
-    //for(int i=0; i<10; i++) {
-
     IrSender.sendNEC(address, command, 0);
-    //}
-    //vTaskDelay(10 / portTICK_PERIOD_MS);
-
+    vTaskDelay(400 / portTICK_PERIOD_MS);
+  }
 }
 
-
+void taskReceiveMessage(void *pvParameters)
+{
+  while(1)
+  {
+    if(IrReceiver.decodeNEC())
+    {
+      if(!checkDecode(IrReceiver.decodedIRData.decodedRawData))   //If the decode causes bit lost resume and return
+      {
+        Serial.println("Message is lost. Wait for the new receivement.");
+      }
+      else
+      {
+        //Serial.print("Message is decoded: ");
+        //Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
+        parseMessageMU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+        if(!checkHeader(&bu))                                     //Check the header if wrong resume and return
+        {
+          //Serial.println("Message did not come from BU");
+        }
+        else  //Header doğruysa
+        {
+          if(!checkTalk(&bu)) //BU, MU ile konuşmuyorsa ya da genel mesaj yayınlıyorsa
+          {
+            Serial.print("BU does not communicate with MU");
+            Serial.println((mu.uiMUHeader-1));
+          }
+          else //MU ile konuşuyosa
+          {
+            if(!checkReceivement(&bu, &mu))
+            {
+              Serial.println("BU did not get acknowledgement yet.");
+            }
+            else
+            {
+              setReceivement(&mu);
+              QueueID = bu.uiBUQueue;
+              learnTargetLocation(&mu,&bu);
+              getWhoFound(&bu);
+              march = 1; //Marş Marş !!!
+            }
+          }
+        }
+      }
+    }
+    IrReceiver.resume();
+  }
+}
 
 void taskMovementMotor(void *pvParameters)
 {
@@ -1015,7 +1454,7 @@ void taskMovementMotor(void *pvParameters)
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             angle = ypr[0] * 180/M_PI; //yaw (angle wrt z-axis) 
-            Serial.println(angle);
+            // Serial.println(angle);
         #endif
 
         #ifdef OUTPUT_READABLE_REALACCEL
@@ -1056,8 +1495,18 @@ void taskMovementMotor(void *pvParameters)
         PID_backward();
       }
 
-      if(is_left == false && is_right == false){ // && is_backward_after_rotate==false
+      // Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+      if (!rfid.PICC_IsNewCardPresent()) 
+      {
+        continue;
+      }
+      // Verify if the NUID has been readed
+      if ( !rfid.PICC_ReadCardSerial()) {
+        continue;
+      }
 
+      if(is_left == false && is_right == false){ // && is_backward_after_rotate==false
+        mu.uiMUCurrentLocation = encodeRFID(rfid.uid.uidByte);
         Serial.print("Card num:");
         Serial.println(mu.uiMUCurrentLocation);
 
@@ -1065,7 +1514,7 @@ void taskMovementMotor(void *pvParameters)
           continue;
         }
         
-        
+        /*
         if((setup_path == true) && (mu.uiMUCurrentLocation !=  UNKNOWN)){
           if(flag_first_pos  == true){
             first_position = mu.uiMUCurrentLocation;
@@ -1080,7 +1529,7 @@ void taskMovementMotor(void *pvParameters)
           
             //Grid g = createSubGrid(3,0,84,0);
 
-            Serial.println("Before path");
+            // Serial.println("Before path");
 
             path = func(g,second_position+12);
             for (int& elem : path) {
@@ -1162,7 +1611,7 @@ void taskMovementMotor(void *pvParameters)
                   }
                   
                   path.erase(path.begin());
-                  Serial.print("Left U");
+                  // Serial.print("Left U");
                   
 
                   brake(motor_left, motor_right); 
@@ -1194,7 +1643,7 @@ void taskMovementMotor(void *pvParameters)
                   }
 
                   path.erase(path.begin());
-                  Serial.print("Right U");
+                  // Serial.print("Right U");
                   brake(motor_left, motor_right); 
                   vTaskDelay(1000 / portTICK_PERIOD_MS);              
                   target -= 180;
@@ -1255,9 +1704,10 @@ void taskMovementMotor(void *pvParameters)
               }
             }
           }
-        }
+        }*/
       }
       
     }
+    rfid.PCD_StopCrypto1();
   }
 }

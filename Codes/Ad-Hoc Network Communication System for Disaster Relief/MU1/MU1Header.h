@@ -30,7 +30,9 @@
     #include "Wire.h"
 #endif
 
-
+//define sound speed in cm/uS
+#define SOUND_SPEED 0.034
+#define CM_TO_INCH 0.393701
 
 /*************************************************/
 /*******************HEADERS********************/
@@ -49,11 +51,20 @@
 #define BU_MSG_RECEIVED_MU3     0x3
 #define BU_MSG_NOT_RECEIVED     0x0
 
-#define BU_IN                   0x1
-#define BU_OUT                  0x2
+#define BU_TALK_MU1             MU1_NAME
+#define BU_TALK_MU2             MU2_NAME
+#define BU_TALK_MU3             MU3_NAME
+#define BU_AVAILABLE            0xF
 
-#define BU_TARGET_KNOWN         0x1
-#define BU_TARGET_NOT_KNOWN     0x2
+#define FIRST                   0x1
+#define SECOND                  0x2
+#define THIRD                   0x3
+#define INIT                    0x4
+
+#define MU1_FOUND               0x1
+#define MU2_FOUND               0x2
+#define MU3_FOUND               0x3
+#define NF                      0x0
 
 /*************************************************/
 /*******************MU MSGS**********************/
@@ -174,8 +185,8 @@
 /*************************************************/
 /***************COMMUNICATION PINS****************/
 
-#define MU_TRANSMITTER         32 /*****************WARNING*****MOTOR DRIVER****************/
-#define MU_RECEIVER            26
+#define MU_TRANSMITTER         32 
+#define MU_RECEIVER            27
 
 /*************************************************/
 /*******************MOTOR PINS********************/
@@ -185,12 +196,6 @@
 
 #define SS_PIN                  5
 #define RST_PIN                 0
-
-/**************************************************/
-/*****************DC MOTOR PINS******************/
-//#define PIN_IN1     4   /*****************WARNING***********MOTOR DRIVER**********/
-//#define PIN_IN2     2   /*****************WARNING***********INTERRUPT PIN**********/
-//#define PIN_ENA     15  /*****************WARNING***********MOTOR DRIVER**********/
 
 /*************************************************/
 /***************DISTANCE SENSOR*******************/
@@ -209,7 +214,7 @@
 #define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
 #define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
 #define AIN2 4 // ESP32 Pin D14 to TB6612FNG Pin AIN2
-#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+#define BIN2 26 // ESP32 Pin D27 to TB6612FNG Pin BIN2
 #define PWMA 15 // ESP32 Pin D26 to TB6612FNG Pin PWMA
 #define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
 #define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
@@ -222,9 +227,9 @@ typedef struct MU_STRUCT
 {   
   unsigned int uiMUHeader = MU1_NAME;
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
-  unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
+  unsigned int uiMUFinding = MU_TARGET_FOUND;
   unsigned int uiMUCurrentLocation = UNKNOWN;
-  unsigned int uiMUTargetLocation = UNKNOWN;  
+  unsigned int uiMUTargetLocation = TILE_G6;  
 
 }MU;
 
@@ -232,8 +237,9 @@ typedef struct BU_STRUCT
 {
   unsigned int uiBUHeader = BU_NAME;
   unsigned int uiBUReceivement = BU_MSG_NOT_RECEIVED;
-  unsigned int uiBURange = BU_OUT;
-  unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
+  unsigned int uiBUTalk = BU_AVAILABLE;
+  unsigned int uiBUWhoFound = NF; 
+  unsigned int uiBUQueue = INIT;
   unsigned int uiBUTargetLocation = UNKNOWN;
 
 }BU;
@@ -248,9 +254,11 @@ void parseMessageMU(unsigned int message); //MU parses the message coming from B
 int checkDecode(unsigned int rawdata);
 int checkHeader(BU* bu);
 void setFinding(MU* mu);
-int checkKnowledge(BU* bu);
-void SendMessageMU(void);
-void ReceiveMessageMU(void);
+int checkReceivement(BU* bu, MU* mu);
+void setReceivement (MU* mu);
+int checkTalk(BU* bu);
+void learnTargetLocation(MU* mu, BU* bu);
+void getWhoFound(BU* bu);
 /**************GYRO FUNC DEF*************/
 void dmpDataReady(void);
 
@@ -262,7 +270,10 @@ int encode_direction(int last_loc,int current_loc, int old_diff);
 void PID_forward(void);
 void PID_backward(void);
 void rotate(void);
+void rotate_degree(float target_correction);
+int error_in_path(int base_loc);
+int encode_cross_direction(int c, int p0, int p1);
+void reset_global_var(void);
 /*************TASKS DEF************/
-void taskMotorControl(void *pvParameters);
-void taskRFIDRead(void *pvParameters);
-void taskCommunicate(void *pvParameters);
+void taskSendMessage(void *pvParameters);
+void taskReceiveMessage(void *pvParameters);

@@ -8,6 +8,7 @@
 #define DECODE_NEC
 #include <IRremote.hpp>
 #include <Arduino.h>
+#include "RTOSConfig.h"
 
 #define UINT8                   unsigned char
 #define UINT16                  unsigned short int
@@ -30,11 +31,20 @@
 #define BU_MSG_RECEIVED_MU3     0x3
 #define BU_MSG_NOT_RECEIVED     0x0
 
-#define BU_IN                   0x1
-#define BU_OUT                  0x2
+#define BU_TALK_MU1             MU1_NAME
+#define BU_TALK_MU2             MU2_NAME
+#define BU_TALK_MU3             MU3_NAME
+#define BU_AVAILABLE            0xF
 
-#define BU_TARGET_KNOWN         0x1
-#define BU_TARGET_NOT_KNOWN     0x2
+#define FIRST                   0x1
+#define SECOND                  0x2
+#define THIRD                   0x3
+#define INIT                    0x0
+
+#define MU1_FOUND               0x1
+#define MU2_FOUND               0x2
+#define MU3_FOUND               0x3
+#define NF                      0x0
 
 /*************************************************/
 /*******************MU MSGS**********************/
@@ -145,16 +155,7 @@
 /***************COMMUNICATION PINS****************/
 
 #define BU_TRANSMITTER         32
-#define BU_RECEIVER            26
-
-
-
-/*************************************************/
-/***************DC MOTOR PINS****************/
-
-//#define PIN_IN1     4
-//#define PIN_IN2     2
-//#define PIN_ENA     15
+#define BU_RECEIVER            27
 
 /*************************************************/
 /*******************STRUCTS*********************/
@@ -173,29 +174,38 @@ typedef struct BU_STRUCT
 {
   unsigned int uiBUHeader = BU_NAME;
   unsigned int uiBUReceivement = BU_MSG_NOT_RECEIVED;
-  unsigned int uiBURange = BU_IN;
-  unsigned int uiBUKnowledge = BU_TARGET_NOT_KNOWN;
+  unsigned int uiBUTalk = BU_AVAILABLE;
+  unsigned int uiBUWhoFound = NF; 
+  unsigned int uiBUQueue = INIT;
   unsigned int uiBUTargetLocation = UNKNOWN;
 
 }BU;
 
 /*********************************/
 
-unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiRange, unsigned int uiKnowing, unsigned int uiTargetLocation);
+unsigned int createMessageBU(unsigned int uiHeader, unsigned int uiReceivement, unsigned int uiTalk, unsigned int uiWhoFound, unsigned int uiQueue, unsigned int uiTargetLocation);
 void parseMessageBU(unsigned int message); //BU parses the message coming from MU
-
-void taskCommunicate(void *pvParameters); //Message sent by BU
-void SendMessageBU(void); //Message sent by BU
-void ReceiveMessageBU(void); //Message received by BU
 
 unsigned int getHeader(unsigned int rawdata);
 int checkFinding(MU* mu);
 int checkDecode(unsigned int rawdata);
 int checkHeader(unsigned int message);
+void giveWhoFound(BU* bu, MU* mu);
 
-void setKnowledgeBU(BU* bu);
-void resetKnowledgeBU(BU* bu);
+
+void setTalk(BU* bu, MU* mu);
+void resetTalk(BU* bu);
+int checkTalk(BU* bu, MU* mu);
+
+
+void resetReceivement(BU* bu);
+void setReceivement(BU* bu, unsigned int rcv);
+int checkReceivement(MU* mu);
+
 
 void sayTargetLocation(BU* bu, MU* mu);
+
+void taskSendMessageBU(void *pvParameters);
+void taskReceiveMessageBU(void *pvParameters);
 
 //void taskMotorControl(void *pvParameters);
