@@ -141,7 +141,7 @@ int checkDecode(unsigned int rawdata)
 ******************************************************************************/
 int checkHeader(unsigned int message)  
 {
-  return ((((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU1_NAME));
+  return ((((message & 0x00F00000)>>20) == MU1_NAME) || (((message & 0x00F00000)>>20) == MU2_NAME) || (((message & 0x00F00000)>>20) == MU3_NAME));
 }
 
 int checkReceivement(MU* mu)
@@ -351,6 +351,7 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     Serial.println("BU started to communicate with MU1");
                     setTalk(&bu,&mu1);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU1);
                     giveQueueNumber(&bu,QueueNumber);
                     QueueNumber++;
                   }
@@ -365,6 +366,7 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     Serial.println("BU started to communicate with MU2");
                     setTalk(&bu,&mu2);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU2);
                     giveQueueNumber(&bu,QueueNumber);
                     QueueNumber++;
                   }
@@ -379,6 +381,7 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     Serial.println("BU started to communicate with MU3");
                     setTalk(&bu,&mu3);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU3);
                     giveQueueNumber(&bu,QueueNumber);
                     QueueNumber++;                    
                   }
