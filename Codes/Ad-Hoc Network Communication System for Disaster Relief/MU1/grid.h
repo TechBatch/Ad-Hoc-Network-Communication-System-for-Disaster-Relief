@@ -3,6 +3,20 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <algorithm>
+#include <queue>
+#include <stack>
+#include <climits> // For INT_MAX
+
+using namespace std;
+
+// Struct for output of calculatePath
+struct Path{
+    std::vector<int> path;
+    int dead_tile;
+};
+
 
 // visiting status of Tile
 enum class Visited {UNVISITED, VISITED};
@@ -24,6 +38,8 @@ class Tile
         std::vector<int>& getNeighbors();
         // Status of Tile: visited or unvisited
         Visited status;
+        // Weight of the crossing this tile
+        int weight = 0;
         // Return status
         int getStatus();
 };
@@ -33,6 +49,7 @@ class Grid
     private:
         // Tiles of grid
         std::vector<Tile> tiles;
+
         // Edge number
         int N;
 
@@ -44,6 +61,9 @@ class Grid
 
         // Visited status vector
         std::vector<int> unvisited_tiles;
+
+        // Base Tiles
+        std::vector<int> base_tiles = {0};
 
         // Tile functions
         void addTile(int id, std::vector<int>& neighbors);
@@ -67,13 +87,21 @@ class Grid
         int getTileNumber();
 
         // Calculate shortest path
-        std::vector<int> calculatePath(int source, int destination);
+        Path calculatePath(int source, int destination);
 };
-
-using namespace std;
-
 //**** HELPER FUNCTIONS ****//
+int Find(vector<int> vec, int element) {
 
+    int L = vec.size();
+
+    for(int i=0; i<L; i++) {
+
+        if(vec[i] == element)
+            return i;
+    }
+
+    return -1;
+}
 // The function to get index value of key in the vector
 int getTileIndex(vector<Tile> tiles, int key)
 {
@@ -188,12 +216,13 @@ void Grid::addTile(int id, std::vector<int>& neighbors)
 
     for (int i = 0; i<neighbors.size(); i++)
     {
+        FLAG_EXIST = true;
         // Neighbor's Id
         NeighborId     = neighbors[i];
         // Get the neighbor
         NeighborTile   = getTile(NeighborId);
         // If the NeighborTile exists add Tile to its neighbors
-        if(NeighborTile != NULL)
+        if(NeighborTile != nullptr)
         {
             vector<int> NeighbOfNeigb = NeighborTile->getNeighbors(); // Neighbors vector of neighbor of Tile
             for (int n : NeighbOfNeigb)
@@ -204,7 +233,9 @@ void Grid::addTile(int id, std::vector<int>& neighbors)
             if (FLAG_EXIST) // If the Tile does not exists in neighbors of its neighbors, add to its neighbors' neighbors
                 NeighborTile->getNeighbors().push_back(id);
         }
+
     }
+    unvisited_tiles.push_back(id);
 }
 
 void Grid::addObstacle(int id)
@@ -233,6 +264,7 @@ void Grid::addObstacle(int id)
         if(Tile.getId() == id)
             removetilesById(tiles, id);
             removeElementByValue(unvisited_tiles,id);
+            removeElementByValue(base_tiles,id);
     }
 
 }
@@ -256,29 +288,21 @@ void Grid::printGrid()
 // Grid member function to change Tile visiting status
 void Grid::changeTileStatus(int id,Visited status)
 {
-    int index = getTileIndex(tiles,id);
-    Tile& t = tiles[index];
-    t.status = status;
+    // Get tile
+    int index   = getTileIndex(tiles,id);
+    Tile& t     = tiles[index];
+    // Update status
+    t.status    = status;
 
     // If the tile is visited remove it from unvisited vector
-    if(status == Visited::VISITED)
+    if(status == Visited::VISITED){
         removeElementByValue(unvisited_tiles,id);
-
-
-
-}
-
-int Find(vector<int> vec, int element) {
-
-    int L = vec.size();
-
-    for(int i=0; i<L; i++) {
-
-        if(vec[i] == element)
-            return i;
+        // Update weight
+        t.weight    = t.weight + 1;
+    }else{
+        unvisited_tiles.push_back(id);
     }
 
-    return -1;
 }
 
 // Get tile's status with id
@@ -294,7 +318,14 @@ int Grid::getTileNumber()
 {
     return tiles.size();
 }
-std::vector<int> Grid::calculatePath(int source, int destination) {
+
+
+// Implementation of calculatePath
+
+Path Grid::calculatePath(int source, int destination) {
+
+    Path output;
+    output.dead_tile = -1;
 
     const int node_num = tiles.size();
     const int visited = 1, unvisited = 0;
@@ -328,7 +359,8 @@ std::vector<int> Grid::calculatePath(int source, int destination) {
         for (int i = 0; i < w_neighbors.size(); i++) {
             int idx = Find(id, w_neighbors[i]);
             Tile* v_Tile = getTile(w_neighbors[i]);
-            int weight   = (v_Tile->getStatus() == 0 ? 1 : 2);
+//            int weight   = (v_Tile->getStatus() == 0 ? 1 : 2);
+            int weight   = v_Tile->weight;
             // In case the neighbor has not been visited yet
             if (dist[idx] > dist[w_index] + weight) {
                 mark[idx] = visited;        // mark as visited
@@ -340,10 +372,18 @@ std::vector<int> Grid::calculatePath(int source, int destination) {
     }
 
     int v = destination;
+    if (prev[Find(id, destination)] == -1){
+        output.path      = {0};
+        output.dead_tile = destination;
+        return output;}
 
     // In case no possible path exists
-    if (prev[Find(id, v)] == -1 || Find(id, source) == -1 || Find(id, destination) == -1)
-        return {0};
+    if (prev[Find(id, v)] == -1 || Find(id, source) == -1 || Find(id, destination) == -1){
+        output.path = {0};
+        output.dead_tile = -1;
+        return output;
+    }
+
 
     // Construct the path vector by prev[] array
     // stop the loop when the source node is reached
@@ -354,7 +394,9 @@ std::vector<int> Grid::calculatePath(int source, int destination) {
     }
 
     std::reverse(path.begin(), path.end()); // reverse the path to obtain correct order
-    return path;
+    output.path = path;
+    output.dead_tile = -1;
+    return output;
 }
 
 #endif // GRID_H_INCLUDED

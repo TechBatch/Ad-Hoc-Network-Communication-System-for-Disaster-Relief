@@ -227,9 +227,11 @@ typedef struct MU_STRUCT
 {   
   unsigned int uiMUHeader = MU1_NAME;
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
-  unsigned int uiMUFinding = MU_TARGET_FOUND;
+  unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
   unsigned int uiMUCurrentLocation = UNKNOWN;
-  unsigned int uiMUTargetLocation = TILE_G6;  
+  unsigned int uiMUTargetLocation = UNKNOWN;   //EDA SENİN FONKSİYONUNUN İNPUTLARINDAN BİRİ BU mu.uiMUTargetLocation: Target Location
+                                              //FoundInfo : Kim buldu targeti
+                                              //QueueID: Base'in atatdığı sıra
 
 }MU;
 
@@ -266,14 +268,18 @@ void dmpDataReady(void);
 int encodeRFID(byte *buffer);
 
 /************MOTOR FUNC DEF**************/
-int encode_direction(int last_loc,int current_loc, int old_diff);
 void PID_forward(void);
 void PID_backward(void);
-void rotate(void);
+void rotate (void);
 void rotate_degree(float target_correction);
 int error_in_path(int base_loc);
-int encode_cross_direction(int c, int p0, int p1);
 void reset_global_var(void);
+int check_closest_tile(int sub_tile,int loc);
+void not_finding_any_card(void);
+void rotate_degree(float target_correction);
+int check_corner(int base_loc);
+int encode_cross_direction(int c, int p0, int p1);
+int encode_direction(int last_loc,int current_loc, int old_diff);
 /*************TASKS DEF************/
 void taskSendMessage(void *pvParameters);
 void taskReceiveMessage(void *pvParameters);
