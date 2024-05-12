@@ -306,7 +306,7 @@ void taskReceiveMessageBU(void *pvParameters){
                     setTalk(&bu, &mu2);
                     giveQueueNumber(&bu, QueueNumber);
                     sayTargetLocation(&bu, &mu2);
-                    giveWhoFound(&bu,&mu1);
+                    giveWhoFound(&bu,&mu2);
                     QueueNumber++;
                   }
                 }
@@ -329,7 +329,7 @@ void taskReceiveMessageBU(void *pvParameters){
                     setTalk(&bu, &mu3);
                     giveQueueNumber(&bu, QueueNumber);
                     sayTargetLocation(&bu, &mu3);
-                    giveWhoFound(&bu,&mu1);
+                    giveWhoFound(&bu,&mu3);
                     QueueNumber++;
                   }
                 }
