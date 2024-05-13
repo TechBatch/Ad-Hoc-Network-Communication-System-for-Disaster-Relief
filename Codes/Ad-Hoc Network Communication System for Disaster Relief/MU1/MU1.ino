@@ -14,9 +14,7 @@ byte nuidPICC[4];
 MU mu;
 BU bu;
 
-int FoundInfo = 0;
-int QueueID = 0;
-int march = 0;
+
 
 /******************************/
 /******************************/
@@ -58,9 +56,6 @@ float last_error = 0;
 float error_lu_angle = 0;
 float targetAngle = 0;
 int target_location = 100; // Unknown
-int red = 14;
-int yellow = 32;
-int green = 26;
 
 bool dur = false;
 int card_num = 0;
@@ -149,6 +144,7 @@ int cross_step = 0;
 bool if_cross_error = false;
 int cross_card = 0;
 
+// int MU_number = mu.uiMUHeader - 1; //BURAYA DİKKAT EDİN
 int MU_number = mu.uiMUHeader - 1; //BURAYA DİKKAT EDİN
 
 // ==============================================
@@ -194,13 +190,27 @@ bool is_going_sub_grid = false;
 int ending_location = 0;
 int movement = 0;
 bool is_target_found_through_base = false;
-bool searching_done = false;
 bool talked_with_base = false; 
 bool in_sub; 
 bool is_searching = true; 
 int go_to_target_location = 81;
 bool is_going_target = false;
 bool waiting_for_base = false;
+bool flag_target_found_for_returning_base = true;
+int FoundInfo = 0;
+int QueueID = 0;
+int march = 0;
+bool flag_target_found_before = false;
+bool first_thing_first = true;
+const unsigned long redInterval = 100; // Blink interval for red LED
+const unsigned long yellowInterval = 50; // Blink interval for yellow LED
+
+// Variables to track timing
+unsigned long previousRedMillis = 0;
+unsigned long previousYellowMillis = 0;
+bool finished = false;;
+int redLedState = LOW;
+int yellowLedState = LOW;
 
 void setup() {
 
@@ -227,6 +237,26 @@ void setup() {
     mpu.setXGyroOffset(128.00000);
     mpu.setYGyroOffset(-19.00000);
     mpu.setZGyroOffset(18.00000);
+
+    Kp_backward = 4;
+    Ki_backward = 0.01;
+    Kd_backward = 12;
+    // PID_forward
+    Kp = 4;
+    Ki = 0.02;
+    Kd = 6;
+    // Forward hiz
+    mtrSpd_r = 80;
+    mtrSpd_l = 80;
+    // Backward hiz
+    mtrSpd_backward_r = 85;
+    mtrSpd_backward_l = 80;
+    // Turn hiz
+    left_motor_fast = 80;
+    right_motor_fast = 80;
+    time_delay_const = 5000;
+    time_delay = time_delay_const;
+
   }
   else if(MU_number == 2){
     mpu.setXAccelOffset(-1125.00000); 
@@ -235,6 +265,25 @@ void setup() {
     mpu.setXGyroOffset(17.00000);
     mpu.setYGyroOffset(249.00000);
     mpu.setZGyroOffset(20.00000);
+    Kp_backward = 4;
+    Ki_backward = 0.01;
+    Kd_backward = 8;
+  // PID_forward
+    Kp = 4;
+    Ki = 0.01;
+    Kd = 6;
+  // Forward hiz
+    mtrSpd_r = 100;
+    mtrSpd_l = 100;
+  // Backward hiz
+    mtrSpd_backward_r = 100;
+    mtrSpd_backward_l = 100;
+  // Turn hiz
+    left_motor_fast = 90;
+    right_motor_fast = 90;
+    time_delay_const = 3000;
+    time_delay = time_delay_const;
+
   }
   else if(MU_number == 3){
     mpu.setXAccelOffset(-5183.00000); 
@@ -243,6 +292,24 @@ void setup() {
     mpu.setXGyroOffset(47.00000);
     mpu.setYGyroOffset(73.00000);
     mpu.setZGyroOffset(-32.00000);
+    Kp_backward = 4;
+    Ki_backward = 0.01;
+    Kd_backward = 6;
+  // PID_forward
+    Kp = 4;
+    Ki = 0.01;
+    Kd = 6;
+  // Forward hiz
+    mtrSpd_r = 80;
+    mtrSpd_l = 70;
+  // Backward hiz
+    mtrSpd_backward_r = 80;
+    mtrSpd_backward_l = 80;
+  // Turn hiz
+    left_motor_fast = 70;
+    right_motor_fast = 85;
+    time_delay_const = 1600;
+    time_delay = time_delay_const;
   }
   else{
     mpu.setXAccelOffset(-1223.00000); 
@@ -339,7 +406,15 @@ void setup() {
     g_self = g3;
     base_self = g_self.base_tiles[0];
   }
+  // Base assignments
+  base1 = g1.base_tiles[0];
+  base2 = g2.base_tiles[0];
+  base3 = g3.base_tiles[0];
 
+  pinMode(yellow, OUTPUT); // green
+  pinMode(red, OUTPUT); // red
+  digitalWrite(yellow, LOW);
+  digitalWrite(red, LOW);
   /*****************TASK CREATIONS*****************/
   xTaskCreatePinnedToCore(
     taskSendMessage,        // Task function
@@ -363,6 +438,22 @@ void setup() {
 }
 
 void loop() {
+
+  if(finished){
+    if (millis() - previousRedMillis >= redInterval) {
+      previousRedMillis = millis();  // Save the last time the LED state was changed
+      redLedState = !redLedState;    // Toggle the LED state
+      digitalWrite(red, redLedState); // Apply the new state to the LED
+    }
+
+    // Check if it's time to change the state of the yellow LED
+    if (millis() - previousYellowMillis >= yellowInterval) {
+      previousYellowMillis = millis();  // Save the last time the LED state was changed
+      yellowLedState = !yellowLedState;    // Toggle the LED state
+      digitalWrite(yellow, yellowLedState); // Apply the new state to the LED
+    }
+  }
+  
   if (!dmpReady){
     return;
   } 
@@ -383,7 +474,6 @@ void loop() {
           if (angle < -180){
             angle += 360;
           }
-          //Serial.println(angle);
       #endif
 
       #ifdef OUTPUT_READABLE_REALACCEL
@@ -396,16 +486,114 @@ void loop() {
       #endif
   }
 
-  if(waiting_for_base){
-    brake(motor_left, motor_right); 
-    delay(300);
-    waiting_for_base = false;
-    //is_going_target = true;
-    talked_with_base = true;
+  if(march == 1){ // march == 1
+    if(waiting_for_base){
+
+      waiting_for_base = false;
+
+      GetTargetTiles(Target1, Target2, Target3, mu.uiMUTargetLocation, g_global);
+      if (MU_number == 1){
+        go_to_target_location = Target1;
+      }
+      else if (MU_number == 2){
+        go_to_target_location = Target2;
+      }
+      else if (MU_number == 3){
+        go_to_target_location = Target3;
+      }
+      flag_target_found_before = true;
+      time_zero = millis(); 
+      dur = false;
+      ending_location = go_to_target_location;
+
+      path.clear();
+      path_struct = TargetPath(QueueID, MU_number, FoundInfo, base_self, base1, base2, base3, Target1, Target2, Target3, g_global);
+      path = path_struct.path;
+      stop_list = path.back();
+      time_zero = millis();
+      old_card_num = base_self;
+      is_going_target = true;
+      movement = 1;
+      digitalWrite(yellow, HIGH);
+      digitalWrite(red, HIGH);
+
+      direction_glob = encode_direction(path[0], path[1], old_diff_glob); //0: forward, 1: left, 2: right, 3: u, 4: stop
+      old_diff_glob = path[1] - path[0];
+      old_path.push_back(path.front());
+      path.erase(path.begin());
+      if(direction_glob != 0){          
+        if(direction_glob == 1){ //Left turn
+          Serial.println("left");
+          brake(motor_left, motor_right); 
+          delay(1000);              
+          target += 90;
+          if (target > 180){
+            target -= 360;
+          }
+          is_left = true;
+          is_forward = false;
+          flag_dur = true;
+
+          
+        }
+        else if(direction_glob == 2){ //Right turn
+          Serial.println("right");
+          brake(motor_left, motor_right); 
+          delay(1000);
+          target -= 90;
+          if (target <= -180){
+            target += 360;
+          }
+          is_right = true;
+          is_forward = false;
+          flag_dur = true;
+        }
+        else if(direction_glob == 3){
+          Serial.println("backward direc");
+          brake(motor_left, motor_right); 
+          delay(1000);
+          is_forward = false;
+        }
+        else if(direction_glob == 4){
+          Serial.println("dur");
+          brake(motor_left, motor_right); 
+          delay(300);
+          is_forward = false;
+          is_backward = false;
+
+          
+          if(is_going_target){
+            dur = true;
+            is_going_target = false;
+            return;
+          }
+        }
+        time_zero = millis();
+      }
+      else{
+        if((!is_backward) && (!is_forward)){
+          is_forward = true;
+        }
+        time_zero = millis();
+        Serial.println("forward devam");
+        //is_forward = true;
+      }
+    }
+    else if(flag_target_found_for_returning_base){ //flag_target_found_for_returning_base
+      //brake(motor_left, motor_right); 
+      //delay(300);
+      is_target_found_through_base = true;
+      return_base = true;
+      is_searching = false;
+      flag_target_found_for_returning_base = false;   
+      flag_target_found_before = true; 
+      time_zero = millis();
+    }
   }
 
+  /**/
 
-  if(false){
+  if((first_thing_first || is_going_sub_grid) && false){
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
     // Sets the trigPin on HIGH state for 10 micro seconds
@@ -421,11 +609,17 @@ void loop() {
       
     if((distanceCm < 5) && (distanceCm != 0.00)){
       brake(motor_left, motor_right); 
+      rfid.PCD_StopCrypto1();
+      time_zero = millis();
       return;
     }
   }
   if(setup_path){
-
+    if(error_path_setup){
+      error_path_setup = false;
+      is_forward = true;
+      is_backward = false;
+    }
     if(flag_first_pos){
       time_zero = millis();
     }
@@ -454,13 +648,15 @@ void loop() {
     if(count_number_of_errors > 1){
       not_finding_any_card();
       count_number_of_errors = 0;
-      step_size *= 3;
+      
     }
 
     if((error_case == 0) || (count_number_of_errors > 1)){ // Step by step find direction
       last_error = 0;
       integral = 0;
       rotate_degree(step_size);
+      rfid.PCD_StopCrypto1();
+      return;
     }
 
     if ( ! rfid.PICC_IsNewCardPresent()) {
@@ -474,12 +670,47 @@ void loop() {
     mu.uiMUCurrentLocation = card_num;
     count_number_of_errors = 0;
     time_delay = time_delay_const;
+    digitalWrite(yellow, LOW);
+    digitalWrite(red, LOW);
+    if((found_target) && (card_num != target_location)){
+      card_num_under_target = card_num;
+      mu.uiMUTargetLocation = card_num_under_target;
+      setFinding(&mu);
+      ending_location = base_self;
+      
+      found_target = false;
+      return_base = true; 
+      is_target_found_through_mu = true;
+      is_searching = false;
+      time_zero = millis();
+      is_going_sub_grid = false;
+      going_sub_grid_location = 0;
+      movement = 1;
+      
+    }
+
+    if((target_location == card_num) && (!return_base) && (!flag_target_found_before)){
+      brake(motor_left, motor_right); 
+      delay(300);
+      //path.clear();
+      Serial.println("target bulundu");
+      found_target = true;
+      time_zero = millis();
+      return_base = true; 
+      //old_card_num = card_num;
+      rfid.PCD_StopCrypto1();
+      flag_target_found_before = true;
+      
+      return;
+    }
+
     if((card_num == first_position) && (error_case == 5)){
       not_finding_any_card();
     }
 
-    if((setup_path) && (card_num != 100)){
+    if((setup_path) && (card_num != target_location)){
       if(flag_first_pos){
+  
         first_position = card_num;
         flag_first_pos = false;
         flag_second_pos = true;
@@ -506,6 +737,7 @@ void loop() {
         }
 
         second_position = card_num;
+        first_thing_first = false;
         flag_second_pos = false;
         
         brake(motor_left, motor_right); 
@@ -520,16 +752,22 @@ void loop() {
           is_going_sub_grid = true; 
         }
         else if(is_searching){
+          digitalWrite(yellow, HIGH);
+          digitalWrite(red, LOW);
           movement = 2;
           ending_location = 0;
         }
         else if(return_base){
+          digitalWrite(yellow, LOW);
+          digitalWrite(red, HIGH);
           ending_location = base_self;
           movement = 1;
         }
         else if(is_going_target){
+          digitalWrite(yellow, HIGH);
+          digitalWrite(red, HIGH);
           ending_location = go_to_target_location;
-          movement = 1; 
+          movement = 3; 
         }
 
         if(movement == 1){
@@ -543,6 +781,12 @@ void loop() {
           }
           old_path.clear();
           path_struct = func(g_self,second_position);
+          path = path_struct.path;
+          stop_list = path.back();
+        }
+        else if(movement == 3){
+          path.clear();
+          path_struct = TargetPath(QueueID,MU_number, FoundInfo,second_position,base1,base2, base3, Target1, Target2, Target3,g_global);
           path = path_struct.path;
           stop_list = path.back();
         }
@@ -563,6 +807,8 @@ void loop() {
         error_case = 4;
         step_index = 0;
         old_path.push_back(first_position);
+        
+
       }
     }
   }
@@ -591,7 +837,6 @@ void loop() {
       time_zero = millis();
     }
     else if(is_backward){
-      Serial.println("backward");
       PID_backward();
       //time_zero = millis();
     }
@@ -603,8 +848,9 @@ void loop() {
     if((error_case == 0) || (count_number_of_errors > 1)){ // Step by step find direction
       last_error = 0;
       integral = 0;
-      Serial.println(step_size);
       rotate_degree(step_size);
+      rfid.PCD_StopCrypto1();
+      return;
     }
     if ( ! rfid.PICC_IsNewCardPresent()) {
       return;
@@ -615,8 +861,7 @@ void loop() {
 
     card_num = encodeRFID(rfid.uid.uidByte);
     mu.uiMUCurrentLocation = card_num;
-    Serial.print("Card num:");
-    Serial.println(card_num);
+
     time_zero = millis();
     count_number_of_errors = 0;
     time_delay = time_delay_const;
@@ -629,7 +874,7 @@ void loop() {
         setFinding(&mu);
         ending_location = base_self;
         path.clear();
-        path_struct = g_self.calculatePath(card_num_under_target, ending_location);
+        path_struct = g_global.calculatePath(card_num_under_target, ending_location);
         path = path_struct.path;
         stop_list = path.back();
         for (int& elem : path) {
@@ -639,10 +884,14 @@ void loop() {
         found_target = false;
         return_base = true; 
         is_target_found_through_mu = true;
-
+        is_searching = false;
         time_zero = millis();
-        old_card_num = card_num;
+        //old_card_num = card_num;
+        is_going_sub_grid = false;
+        going_sub_grid_location = 0;
         movement = 1;
+        digitalWrite(yellow, LOW);
+        digitalWrite(red, HIGH);
       }
       else{
         time_zero = millis();
@@ -651,6 +900,9 @@ void loop() {
       }
     }
     if((going_sub_grid_location == card_num) && (is_going_sub_grid)){
+      brake(motor_left, motor_right); 
+      delay(300);
+
       for (int& elem : old_path) {
         g_self.changeTileStatus(elem, Visited::VISITED);
       }
@@ -660,44 +912,60 @@ void loop() {
       path = path_struct.path;
       stop_list = path.back();
       ending_location = 0;
+      old_card_num = card_num;
       going_sub_grid_location = 0;
       is_going_sub_grid = false;
       movement = 2;
+      digitalWrite(yellow, HIGH);
+      digitalWrite(red, LOW);
 
     }
-    if(is_target_found_through_base || searching_done){
+    if(is_target_found_through_base || (is_searching && (stop_list == card_num))){
+      brake(motor_left, motor_right); 
+      delay(300);
+
       ending_location = base_self;
       path.clear();
-      path_struct = g_self.calculatePath(card_num, ending_location);
+      path_struct = g_global.calculatePath(card_num, ending_location);
       path = path_struct.path;
       stop_list = path.back();
       time_zero = millis();
       old_card_num = card_num;
       return_base = true;
-      searching_done = false;
+      is_searching = false;
       is_target_found_through_base = false;
       movement = 1;
+      digitalWrite(yellow, LOW);
+      digitalWrite(red, HIGH);
+      /*
+      int first_direction = encode_direction(path[0], path[1], old_diff_glob);
       
+      if(first_direction == 0){
+        is_forward = true;
+        is_backward = false;
+      }
+      else{
+        is_forward = false;
+        is_backward = false;
+      }
+
+      */
     }
-    if(talked_with_base){
-      ending_location = go_to_target_location;
-      path.clear();
-      path_struct = g_self.calculatePath(card_num,  ending_location);
-      path = path_struct.path;
-      talked_with_base = false;
-      time_zero = millis();
+    if(return_base && (base_self == card_num)){
+      brake(motor_left, motor_right); 
+      delay(300);
+      waiting_for_base = true;
+      return_base = false;
+      dur = true;
+      old_diff_glob = card_num - old_card_num;
       old_card_num = card_num;
-      is_going_target = true;
-      movement = 1;
+      return;
     }
         
-
-
     if(card_num == path[0]){
       for (int i = 0; i < 13; i++) {
         step_size_vec[i] *= -1.;
       }   
-      Serial.println("araba pathde");
       flag_is_backward_after_rotate = true;
       is_backward_after_rotate = false;
       last_loc_glob = path[0];
@@ -751,23 +1019,24 @@ void loop() {
         else if(direction_glob == 4){
           Serial.println("dur");
           brake(motor_left, motor_right); 
-          if(is_searching){
-            searching_done = true;
-            is_searching = false;
-          }
-          else if(return_base){
-            waiting_for_base = true;
-            return_base = false;
-          }
-          else if(is_going_target){
+          delay(300);
+          is_forward = false;
+          is_backward = false;
+
+          
+          if(is_going_target){
             dur = true;
             is_going_target = false;
+            finished = true;
             return;
           }
         }
         time_zero = millis();
       }
       else{
+        if((!is_backward) && (!is_forward)){
+          is_forward = true;
+        }
         time_zero = millis();
         Serial.println("forward devam");
         //is_forward = true;
@@ -785,13 +1054,12 @@ void loop() {
         return;
       }
       if((old_card_num == card_num)){
-        Serial.println("ayni kart");
         time_zero = millis();
         rfid.PCD_StopCrypto1();
         return;
       }
       
-      if((target_location == card_num) && (!return_base)){
+      if((target_location == card_num) && (!return_base) && (!flag_target_found_before)){
         brake(motor_left, motor_right); 
         delay(300);
         //path.clear();
@@ -801,6 +1069,7 @@ void loop() {
         return_base = true; 
         //old_card_num = card_num;
         rfid.PCD_StopCrypto1();
+        flag_target_found_before = true;
         return;
       }
       if((check_corner(old_card_num)) && (!if_cross_error)){
@@ -832,6 +1101,8 @@ void loop() {
         setup_path = true;
         path.clear();
         time_zero = millis();
+        digitalWrite(yellow, LOW);
+        digitalWrite(red, LOW);
       }
       
       /**/
@@ -851,7 +1122,6 @@ unsigned int createMessageMU(unsigned int uiHeader, unsigned int uiReceivement, 
 }
 
 void parseMessageMU(unsigned int message) //Parsing the messages that come from BU and inserts the proper values to the BU struct
-
 {
   unsigned int uiHeader = (message & 0x00F00000) >> 20;
   unsigned int uiReceivement = (message & 0x000F0000) >> 16; // NO USE
@@ -916,7 +1186,8 @@ void learnTargetLocation(MU* mu, BU* bu)
 
 void setFinding(MU* mu)
 {
-  mu->uiMUFinding = (mu->uiMUCurrentLocation == 0x64) ? MU_TARGET_FOUND : MU_TARGET_NOT_FOUND;
+ // mu->uiMUFinding = (mu->uiMUCurrentLocation == 0x64) ? MU_TARGET_FOUND : MU_TARGET_NOT_FOUND;
+   mu->uiMUFinding = MU_TARGET_FOUND;
 }
 
 int checkReceivement(BU* bu, MU* mu)
@@ -1018,7 +1289,7 @@ int encodeRFID(byte *buffer) {
     return 18;
   }
 
-  else if(buffer[0] == 115 && buffer[1] == 246 && buffer[2] == 155 && buffer[3] == 236) {
+  else if(buffer[0] == 115 && buffer[1] == 203 && buffer[2] == 7 && buffer[3] == 37) {
     //Serial.println("B9");
     return 19;
   }
@@ -1409,11 +1680,13 @@ void not_finding_any_card(){
     if_cross_error = false;
     cross_card = 0;
   }
+  /*
   else if(count_number_of_errors > 3){
     step_size *= 3;
   }
+  */
 }
-
+/*
 void rotate_degree(float target_correction){
   float deltaangle = (target_correction - angle + target);
 
@@ -1460,8 +1733,53 @@ void rotate_degree(float target_correction){
 
 
 }
+*/
+void rotate_degree(float target_correction){
+  float deltaangle = (target_correction - angle + target);
+
+  if ((target == 180) && (angle < 0)){
+    if(target_correction > 0){
+      deltaangle = (-target + target_correction - angle);
+    }
+    else{
+      deltaangle = (-target + target_correction - angle);
+    }
+    
+  }
+  else if ((target == 180) && (angle > 0)){
+    if(target_correction > 0){
+      deltaangle = (-angle + target_correction + target);
+    }
+    else{
+      deltaangle = (-angle + target_correction + target);
+    }
+  }
 
 
+  if (abs(deltaangle) <= 1){
+    brake(motor_left, motor_right); 
+    delay(300);
+    cum_angle = cum_angle + target_correction;
+    is_forward = true;
+    error_case = 4;
+    time_zero = millis();
+    Serial.println("rotate angle good");
+  } 
+  else if((target_correction) > 0){
+  
+    motor_left.brake();
+    motor_right.drive(right_motor_fast);
+  
+  }
+  else if((target_correction) < 0){
+  
+    motor_right.brake();
+    motor_left.drive(left_motor_fast);
+  
+  }
+
+
+}
 
 int check_corner(int base_loc){
 

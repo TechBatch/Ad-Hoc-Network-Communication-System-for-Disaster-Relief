@@ -88,9 +88,9 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
     Serial.print("Finding: ");
     Serial.println(uiFinding, HEX);
     Serial.print("MU Location: ");
-    Serial.println(uiCurrentLocation, HEX);
+    Serial.println(uiCurrentLocation, DEC);
     Serial.print("Target Location: ");
-    Serial.println(uiTargetLocation, HEX);
+    Serial.println(uiTargetLocation, DEC);
   }
   switch(uiHeader)
   {
@@ -293,14 +293,14 @@ void taskReceiveMessageBU(void *pvParameters){
                 Serial.println("Message is received from MU2");
                 if(!checkFinding(&mu2))
                 {
-                  Serial.println("MU does not know the location of target");
+                  Serial.println("MU2 does not know the location of target");
                 }
                 else
                 {
                   if(!checkReceivement(&mu2))
                   {
-                    Serial.print("MU1 knows the target location: ");
-                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                    Serial.print("MU2 knows the target location: ");
+                    Serial.println(mu2.uiMUTargetLocation, HEX);
                     
                     setReceivement(&bu, BU_MSG_RECEIVED_MU2);
                     setTalk(&bu, &mu2);
@@ -316,14 +316,14 @@ void taskReceiveMessageBU(void *pvParameters){
                 Serial.println("Message is received from MU3");
                 if(!checkFinding(&mu3))
                 {
-                  Serial.println("MU does not know the location of target");
+                  Serial.println("MU3 does not know the location of target");
                 }
                 else
                 {
                   if(!checkReceivement(&mu3))
                   {
-                    Serial.print("MU1 knows the target location: ");
-                    Serial.println(mu1.uiMUTargetLocation, HEX);
+                    Serial.print("MU3 knows the target location: ");
+                    Serial.println(mu3.uiMUTargetLocation, HEX);
                     
                     setReceivement(&bu, BU_MSG_RECEIVED_MU3);
                     setTalk(&bu, &mu3);
@@ -434,6 +434,7 @@ void taskReceiveMessageBU(void *pvParameters){
                     {
                       resetTalk(&bu);
                       resetReceivement(&bu);
+                      
                     }                    
                   }
                 break;
@@ -453,6 +454,7 @@ void taskReceiveMessageBU(void *pvParameters){
                     {
                       resetTalk(&bu);
                       resetReceivement(&bu);
+                      Serial.println("Go to Target. Communication is done.Marş Marş!");
                     }                    
                   }
                 break;

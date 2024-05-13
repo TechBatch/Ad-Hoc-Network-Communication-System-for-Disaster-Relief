@@ -175,8 +175,8 @@ typedef struct BU_STRUCT
   unsigned int uiBUHeader = BU_NAME;
   unsigned int uiBUReceivement = BU_MSG_NOT_RECEIVED;
   unsigned int uiBUTalk = BU_AVAILABLE;
-  unsigned int uiBUWhoFound = NF; 
-  unsigned int uiBUQueue = INIT;
+  unsigned int uiBUWhoFound = NF; // NF
+  unsigned int uiBUQueue = INIT; // INIT
   unsigned int uiBUTargetLocation = UNKNOWN;
 
 }BU;
