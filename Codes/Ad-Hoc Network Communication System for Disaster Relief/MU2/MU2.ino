@@ -274,7 +274,7 @@ void setup() {
   // Turn hiz
     left_motor_fast = 70;
     right_motor_fast = 85;
-    time_delay_const = 1600;
+    time_delay_const = 1500;
     time_delay = time_delay_const;
 
   }

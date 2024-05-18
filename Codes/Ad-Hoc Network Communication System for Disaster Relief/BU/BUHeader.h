@@ -168,6 +168,7 @@ typedef struct MU_STRUCT
   unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;   //Have to check
   unsigned int uiMUCurrentLocation = UNKNOWN;                 //Needed for GUI
   unsigned int uiMUTargetLocation = UNKNOWN;      //Have to check according to finding info
+  unsigned int uiMUID = INIT; 
 }MU;
 
 typedef struct BU_STRUCT

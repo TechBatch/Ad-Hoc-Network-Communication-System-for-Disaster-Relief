@@ -154,9 +154,9 @@ int MU_number = mu.uiMUHeader - 1; //BURAYA DİKKAT EDİN
 // Target
 int Target1, Target2, Target3; 
 // Obstacles ELLE GIRILECEK OBSLER
-int obs1 = 62;
-int obs2 = 66; 
-int obs3 = 26; 
+int obs1 = 57;
+int obs2 = 55; 
+int obs3 = 0; 
 // Grid initialitions
 Grid g1       = createSubGrid(1, obs1, obs2, obs3);
 Grid g2       = createSubGrid(2, obs1, obs2, obs3);
@@ -274,7 +274,7 @@ void setup() {
   // Turn hiz
     left_motor_fast = 70;
     right_motor_fast = 85;
-    time_delay_const = 1600;
+    time_delay_const = 1500;
     time_delay = time_delay_const;
 
   }
@@ -310,7 +310,7 @@ void setup() {
   // Turn hiz
     left_motor_fast = 75;
     right_motor_fast = 80;
-    time_delay_const = 1600;
+    time_delay_const = 1700;
     time_delay = time_delay_const;
 
   }

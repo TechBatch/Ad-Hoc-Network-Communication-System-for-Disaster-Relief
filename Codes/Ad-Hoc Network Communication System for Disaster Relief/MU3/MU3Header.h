@@ -227,7 +227,7 @@
 
 typedef struct MU_STRUCT
 {   
-  unsigned int uiMUHeader = MU1_NAME;
+  unsigned int uiMUHeader = MU3_NAME;
   unsigned int uiMUReceivement = MU_MSG_NOT_RECEIVED;
   unsigned int uiMUFinding = MU_TARGET_NOT_FOUND;
   unsigned int uiMUCurrentLocation = UNKNOWN;

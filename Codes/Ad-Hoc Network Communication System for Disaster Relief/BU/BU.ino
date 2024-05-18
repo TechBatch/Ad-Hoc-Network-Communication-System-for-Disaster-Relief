@@ -11,7 +11,15 @@ unsigned int currentLoc2;
 unsigned int currentLoc3;
 unsigned long int currentTime = 0;
 
+unsigned long int timeout1;
+unsigned long int timeout2;
+unsigned long int timeout3;
+
+unsigned long int interval = 10000;
+
 unsigned int QueueNumber = 1;
+
+
 
 void setup() 
 {
@@ -91,38 +99,38 @@ void parseMessageBU(unsigned int message) //BU parses the message coming from MU
     Serial.println(uiCurrentLocation, DEC);
     Serial.print("Target Location: ");
     Serial.println(uiTargetLocation, DEC);
-  }
-  switch(uiHeader)
-  {
-    case MU1_NAME:
+    switch(uiHeader)
+    {
+      case MU1_NAME:
 
-      mu1.uiMUHeader = uiHeader;
-      mu1.uiMUReceivement = uiReceivement;
-      mu1.uiMUFinding = uiFinding;
-      mu1.uiMUCurrentLocation = uiCurrentLocation;
-      mu1.uiMUTargetLocation = uiTargetLocation;
+        mu1.uiMUHeader = uiHeader;
+        mu1.uiMUReceivement = uiReceivement;
+        mu1.uiMUFinding = uiFinding;
+        mu1.uiMUCurrentLocation = uiCurrentLocation;
+        mu1.uiMUTargetLocation = uiTargetLocation;
 
-    break;
+      break;
 
-    case MU2_NAME:
+      case MU2_NAME:
 
-      mu2.uiMUHeader = uiHeader;
-      mu2.uiMUReceivement = uiReceivement;
-      mu2.uiMUFinding = uiFinding;
-      mu2.uiMUCurrentLocation = uiCurrentLocation;
-      mu2.uiMUTargetLocation = uiTargetLocation;
+        mu2.uiMUHeader = uiHeader;
+        mu2.uiMUReceivement = uiReceivement;
+        mu2.uiMUFinding = uiFinding;
+        mu2.uiMUCurrentLocation = uiCurrentLocation;
+        mu2.uiMUTargetLocation = uiTargetLocation;
 
-    break;
+      break;
 
-    case MU3_NAME:
+      case MU3_NAME:
 
-      mu3.uiMUHeader = uiHeader;
-      mu3.uiMUReceivement = uiReceivement;
-      mu3.uiMUFinding = uiFinding;
-      mu3.uiMUCurrentLocation = uiCurrentLocation;
-      mu3.uiMUTargetLocation = uiTargetLocation;
+        mu3.uiMUHeader = uiHeader;
+        mu3.uiMUReceivement = uiReceivement;
+        mu3.uiMUFinding = uiFinding;
+        mu3.uiMUCurrentLocation = uiCurrentLocation;
+        mu3.uiMUTargetLocation = uiTargetLocation;
 
-    break;
+      break;
+    }
   }
 }
 
@@ -157,24 +165,9 @@ void resetReceivement(BU* bu)
 {
   bu->uiBUReceivement = BU_MSG_NOT_RECEIVED;
 }
-void giveQueueNumber(BU* bu, unsigned int num)
+void giveQueueNumber(BU* bu, MU* mu)
 {
-  if(num == 1)
-  {
-    bu->uiBUQueue = FIRST;
-  }
-  else if(num == 2)
-  {
-    bu->uiBUQueue = SECOND;
-  }
-  else if(num == 3)
-  {
-    bu->uiBUQueue = THIRD;
-  }
-  else
-  {
-    bu->uiBUQueue = INIT;
-  }
+  bu->uiBUQueue = mu->uiMUID;
 }
 void giveWhoFound(BU* bu, MU* mu)
 {
@@ -234,9 +227,12 @@ void taskSendMessageBU(void *pvParameters){
     address = (unsigned int)((msg & 0x0000FFFF));
     command = (unsigned int)((msg & 0x00FF0000)>>16);
 
-    IrSender.sendNEC(address,command,0);   
-
-    vTaskDelay(400 / portTICK_PERIOD_MS);
+    if(bu.uiBUWhoFound !=NF )
+    {
+      Serial.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+      IrSender.sendNEC(address,command,0); 
+    }  
+    vTaskDelay(258 / portTICK_PERIOD_MS);
   }
 
 }
@@ -254,37 +250,41 @@ void taskReceiveMessageBU(void *pvParameters){
       {
         //Serial.print("Message is decoded: ");
         //Serial.println(IrReceiver.decodedIRData.decodedRawData,HEX);
-        parseMessageBU(IrReceiver.decodedIRData.decodedRawData);  //Parse the message
+        parseMessageBU(IrReceiver.decodedIRData.decodedRawData);
         if(!checkHeader(IrReceiver.decodedIRData.decodedRawData))   //Check the header if wrong resume and return
         {
           //Serial.println("Message did not come from any MU");
         }
-        else
+        else //Mesaj MU dan geldiyse
         {
-          if(bu.uiBUTargetLocation == UNKNOWN)
+          if(bu.uiBUTargetLocation == UNKNOWN) //Target konumu bilinmiyorsa
           {
-            switch(getHeader(IrReceiver.decodedIRData.decodedRawData))
+            switch(getHeader(IrReceiver.decodedIRData.decodedRawData)) //Mesaj kimden geldi bak
             {
               case 2: //MU1
                 Serial.println("Message is received from MU1");
                 currentLoc1 = mu1.uiMUCurrentLocation;
-                if(!checkFinding(&mu1))
+                if(!checkFinding(&mu1)) //MU targeti bilmiyorsa
                 {
                   Serial.println("MU1 does not know the location of target");
                 }
-                else
+                else //MU targeti biliyorsa
                 {
-                  if(!checkReceivement(&mu1))
+                  if(!checkReceivement(&mu1)) //MU daha önce base ile konuşmamışsa
                   {
                     Serial.print("MU1 knows the target location: ");
                     Serial.println(mu1.uiMUTargetLocation, HEX);
-                    
+                    mu1.uiMUID = QueueNumber;
                     setReceivement(&bu, BU_MSG_RECEIVED_MU1);
                     setTalk(&bu, &mu1);
-                    giveQueueNumber(&bu, QueueNumber);
+                    giveQueueNumber(&bu, &mu1);
                     sayTargetLocation(&bu, &mu1);
                     giveWhoFound(&bu,&mu1);
-                    QueueNumber++;
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }                   
+                    timeout1 = millis();
                   }
                 }
                 break;
@@ -301,13 +301,17 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     Serial.print("MU2 knows the target location: ");
                     Serial.println(mu2.uiMUTargetLocation, HEX);
-                    
+                    mu2.uiMUID = QueueNumber;
                     setReceivement(&bu, BU_MSG_RECEIVED_MU2);
                     setTalk(&bu, &mu2);
-                    giveQueueNumber(&bu, QueueNumber);
+                    giveQueueNumber(&bu, &mu2);
                     sayTargetLocation(&bu, &mu2);
                     giveWhoFound(&bu,&mu2);
-                    QueueNumber++;
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }
+                    timeout2 = millis();
                   }
                 }
                 break;
@@ -324,13 +328,17 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     Serial.print("MU3 knows the target location: ");
                     Serial.println(mu3.uiMUTargetLocation, HEX);
-                    
+                    mu3.uiMUID = QueueNumber;
                     setReceivement(&bu, BU_MSG_RECEIVED_MU3);
                     setTalk(&bu, &mu3);
-                    giveQueueNumber(&bu, QueueNumber);
+                    giveQueueNumber(&bu,  &mu3);
                     sayTargetLocation(&bu, &mu3);
                     giveWhoFound(&bu,&mu3);
-                    QueueNumber++;
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }
+                    timeout3 = millis();
                   }
                 }
                 break;
@@ -352,8 +360,16 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.println("BU started to communicate with MU1");
                     setTalk(&bu,&mu1);
                     setReceivement(&bu, BU_MSG_RECEIVED_MU1);
-                    giveQueueNumber(&bu,QueueNumber);
-                    QueueNumber++;
+                    if(mu1.uiMUID == INIT)
+                    {
+                      mu1.uiMUID = QueueNumber;
+                    }
+                    giveQueueNumber(&bu,&mu1);
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }
+                    timeout1 = millis();
                   }
                   else //aldıysa
                   {
@@ -367,8 +383,16 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.println("BU started to communicate with MU2");
                     setTalk(&bu,&mu2);
                     setReceivement(&bu, BU_MSG_RECEIVED_MU2);
-                    giveQueueNumber(&bu,QueueNumber);
-                    QueueNumber++;
+                    if(mu2.uiMUID == INIT)
+                    {
+                      mu2.uiMUID = QueueNumber;
+                    }
+                    giveQueueNumber(&bu,&mu2);
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }
+                    timeout2 = millis();
                   }
                   else //aldıysa
                   {
@@ -382,8 +406,16 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.println("BU started to communicate with MU3");
                     setTalk(&bu,&mu3);
                     setReceivement(&bu, BU_MSG_RECEIVED_MU3);
-                    giveQueueNumber(&bu,QueueNumber);
-                    QueueNumber++;                    
+                    if(mu3.uiMUID == INIT)
+                    {
+                      mu3.uiMUID = QueueNumber;
+                    }
+                    giveQueueNumber(&bu,&mu3);
+                    if(QueueNumber<THIRD)
+                    {
+                      QueueNumber++;
+                    }
+                    timeout3 = millis();                    
                   }
                   else //aldıysa
                   {
@@ -409,6 +441,13 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     if(!checkReceivement(&mu1)) //Eğer daha önce baseden önemli mesaj almadıysa
                     {
+                      if(millis() - timeout1 >= interval)
+                      {
+                        mu1.uiMUReceivement = MU_MSG_RECEIVED;
+                        resetTalk(&bu);
+                        resetReceivement(&bu);
+                        timeout1 = millis();
+                      }
                       Serial.println("MU1 could not get ack.");
                     }
                     else //aldıysa
@@ -428,6 +467,13 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     if(!checkReceivement(&mu2)) //Eğer daha önce baseden önemli mesaj almadıysa
                     {
+                      if(millis() - timeout2 >= interval)
+                      {
+                        mu2.uiMUReceivement = MU_MSG_RECEIVED;
+                        resetTalk(&bu);
+                        resetReceivement(&bu);
+                        timeout2 = millis();
+                      }
                       Serial.println("MU2 could not get ack.");
                     }
                     else //aldıysa
@@ -448,20 +494,26 @@ void taskReceiveMessageBU(void *pvParameters){
                   {
                     if(!checkReceivement(&mu3)) //Eğer daha önce baseden önemli mesaj almadıysa
                     {
+                      if(millis() - timeout3 >= interval)
+                      {
+                        mu3.uiMUReceivement = MU_MSG_RECEIVED;
+                        resetTalk(&bu);
+                        resetReceivement(&bu);
+                        timeout3 = millis();
+                      }
                       Serial.println("MU3 could not get ack.");
                     }
                     else //aldıysa
                     {
                       resetTalk(&bu);
                       resetReceivement(&bu);
-                      Serial.println("Go to Target. Communication is done.Marş Marş!");
                     }                    
                   }
                 break;
 
                 default:
                   IrReceiver.resume();
-                  break;
+                break;
               }
             }
           }
