@@ -12,6 +12,7 @@
 using namespace std;
 
 // Struct for output of calculatePath
+
 struct Path{
     std::vector<int> path;
     int dead_tile;
@@ -88,7 +89,14 @@ class Grid
 
         // Calculate shortest path
         Path calculatePath(int source, int destination);
+
+        //Check the tile is in the grid
+        bool isInSubgrid(int tile);
+
+        // Integer vector of Tile's id's
+        std::vector<int> Tiles_IDs_vector();
 };
+
 //**** HELPER FUNCTIONS ****//
 int Find(vector<int> vec, int element) {
 
@@ -190,6 +198,31 @@ vector<int>& Tile::getNeighbors()
 Grid::Grid(int N):N(N) {}
 
 //functions
+
+// Tile's id vector
+vector<int> Grid::Tiles_IDs_vector()
+{
+    vector<int>ids;
+    for (Tile& T : tiles){
+        ids.push_back(T.getId());
+    }
+    return ids;
+    return ids;
+}
+// Check the tile is in the grid
+bool Grid::isInSubgrid(int tile) {
+
+
+    int L = tiles.size();
+
+    for(int i=0; i<L; i++) {
+
+        if(tiles[i].getId() == tile)
+            return true;
+    }
+
+    return false;
+}
 
 Tile* Grid::getTile(int id)
 {
@@ -398,5 +431,4 @@ Path Grid::calculatePath(int source, int destination) {
     output.dead_tile = -1;
     return output;
 }
-
 #endif // GRID_H_INCLUDED

@@ -1,5 +1,7 @@
 #include "BUHeader.h"
 
+
+/*setTalk her zaman en son muı değişmeli ?*/
 /******COMMUNICATION INIT******/
 MU mu1;
 MU mu2;

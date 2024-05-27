@@ -154,9 +154,9 @@ int MU_number = mu.uiMUHeader - 1; //BURAYA DİKKAT EDİN
 // Target
 int Target1, Target2, Target3; 
 // Obstacles ELLE GIRILECEK OBSLER
-int obs1 = 62;
-int obs2 = 66; 
-int obs3 = 26; 
+int obs1 = 17;
+int obs2 = 28; 
+int obs3 = 73; 
 // Grid initialitions
 Grid g1       = createSubGrid(1, obs1, obs2, obs3);
 Grid g2       = createSubGrid(2, obs1, obs2, obs3);
@@ -175,7 +175,7 @@ Path path_struct;
 
 bool init_grid = true;
 
-
+bool ultrasonic_error_happened = false;
 float step_size_vec[13] = {-5, 10, -15, 20, -25, 30, -35, 40, -45, 50, -55, +60, -65};
 float step_size_vec_right[13] = {-5, 8, -15, 18, -23, 28, -35, 40, -50, +60, 0, 0, 0};
 //float step_size_vec_left[13] = {0, -3, 5, -8, 10, -15, 18, -23, 28, -35, 40, -50, +60};
@@ -187,6 +187,9 @@ Tile* check_if_own_sub_grid;
 vector<int>path;
 vector<int>old_path;
 int base1, base2, base3, base_self; 
+vector<int> g1_tiles; 
+vector<int> g2_tiles; 
+vector<int> g3_tiles; 
 
 
 bool is_target_found_through_mu = false;
@@ -216,7 +219,8 @@ unsigned long previousYellowMillis = 0;
 bool finished = false;;
 int redLedState = LOW;
 int yellowLedState = LOW;
-bool commmunicated_with_base = false;
+bool 
+commmunicated_with_base = false;
 int first_diff_global = 0;
 #define trigPin     17
 #define echoPin     34
@@ -225,6 +229,11 @@ int which_edge;
 int obs_edge;
 int total_edge;
 
+unsigned long startMillis;  // Store the start time
+unsigned long currentMillis; 
+bool wait_for_ultrasonic = false;
+
+int count_ultrasonic = 0;
 void setup() {
 
   Serial.begin(115200);
@@ -250,7 +259,7 @@ void setup() {
     mpu.setXGyroOffset(128.00000);
     mpu.setYGyroOffset(-19.00000);
     mpu.setZGyroOffset(18.00000);
-*/
+    */
 
     mpu.setXAccelOffset(-5235.00000); 
     mpu.setYAccelOffset(-1190.00000); 
@@ -269,12 +278,12 @@ void setup() {
     mtrSpd_r = 90;
     mtrSpd_l = 70;
   // Backward hiz
-    mtrSpd_backward_r = 80;
+    mtrSpd_backward_r = 85;
     mtrSpd_backward_l = 70; //85
   // Turn hiz
     left_motor_fast = 70;
     right_motor_fast = 85;
-    time_delay_const = 1600;
+    time_delay_const = 1500;
     time_delay = time_delay_const;
 
   }
@@ -310,7 +319,7 @@ void setup() {
   // Turn hiz
     left_motor_fast = 75;
     right_motor_fast = 80;
-    time_delay_const = 1600;
+    time_delay_const = 1200; //2000
     time_delay = time_delay_const;
 
   }
@@ -426,11 +435,14 @@ void setup() {
   g3.addObstacle(obs1);
   g3.addObstacle(obs2);
   g3.addObstacle(obs3);*/
-
+  // IDs of tiles in the grid
+  g1_tiles = g1.Tiles_IDs_vector();
+  g2_tiles = g2.Tiles_IDs_vector();
+  g3_tiles = g3.Tiles_IDs_vector();
   // Update grids 
-  p1_setup = func(g1,1);
-  p2_setup = func(g2,4);
-  p3_setup = func(g3,89);
+  p1_setup = func(g1,g1_tiles[0]);
+  p2_setup = func(g2,g2_tiles[0]);
+  p3_setup = func(g3,g3_tiles[0]);
   dead1    = p1_setup.dead_tile;
   dead2    = p2_setup.dead_tile;
   dead3    = p3_setup.dead_tile;
@@ -498,14 +510,11 @@ void loop() {
       digitalWrite(yellow, yellowLedState); // Apply the new state to the LED
     }
   }
+  bool flag_base_com = false;
+  
+  
 
-  if(commmunicated_with_base){
-    if (millis() - previousRedMillis >= redInterval) {
-      previousRedMillis = millis();  // Save the last time the LED state was changed
-      redLedState = !redLedState;    // Toggle the LED state
-      digitalWrite(red, redLedState); // Apply the new state to the LED
-    }
-  }
+  
   
   if (!dmpReady){
     return;
@@ -519,8 +528,7 @@ void loop() {
           mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
           angle = ypr[0] * 180/M_PI; //yaw (angle wrt z-axis) 
-          Serial.println(angle);
-          Serial.println(cum_angle);
+
           //Serial.println(ypr[0]);
           
           angle = angle - cum_angle;
@@ -541,13 +549,217 @@ void loop() {
           
       #endif
   }
+  /*
+  if(count_ultrasonic > 5){
+    brake(motor_left, motor_right); 
+    reset_global_var();
+    error_path_setup = true;
+    setup_path = true;
+    path.clear();
+    time_zero = millis();
+    digitalWrite(yellow, LOW);
+    digitalWrite(red, LOW);
+    old_card_num = card_num;
+    which_edge = edge_case(card_num);
+    obs_edge = edge_case_of_obs(card_num);
+    if((which_edge == 1) && (obs_edge == 2)){
+      total_edge = 4;
+    }
+    else if((which_edge == 2) && (obs_edge == 1)){
+      total_edge = 5;
+    }
+    else if((which_edge == 3) && (obs_edge == 1)){
+      total_edge = 4;
+    }
+    else if((which_edge == 3) && (obs_edge == 2)){
+      total_edge = 5;
+    }
+    else if((which_edge == 1) && (obs_edge == 3)){
+      total_edge = 4;
+    }
+    else if((which_edge == 2) && (obs_edge == 3)){
+      total_edge = 5;
+    }
+    else if((which_edge == 0) && (obs_edge != 0)){
+      total_edge = obs_edge;
+    }
+    else if((which_edge != 0) && (obs_edge == 0)){
+      total_edge = which_edge;
+    }
+    else if((which_edge == 5) && (obs_edge != 0)){
+      total_edge = which_edge;
+    }
+    else if((which_edge == 4) && (obs_edge != 0)){
+      total_edge = which_edge;
+    }
+    else if((which_edge != 0) && (obs_edge == 5)){
+      total_edge = obs_edge;
+    }
+    else if((which_edge != 0) && (obs_edge == 4)){
+      total_edge = obs_edge;
+    }
+    else{
+      total_edge = 0;
+    }
+
+
+    if((total_edge == 3) || (total_edge == 4) || (total_edge == 5)){
+      edge_error_happened = true;
+      setup_path = false;
+      is_backward = true;
+      return;
+    }
+    wait_for_ultrasonic = false;
+  }
+  */
+
+  if(count_ultrasonic > 1){
+    if(old_diff_glob == 1){
+      if(check_right_and_left(card_num - 10)){
+        brake(motor_left, motor_right); 
+        //delay(1000);
+        target -= 90;
+        if (target <= -180){
+          target += 360;
+        }
+        is_right = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+      else{
+        brake(motor_left, motor_right); 
+        //delay(1000);              
+        target += 90;
+        if (target > 180){
+          target -= 360;
+        }
+        is_left = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+    }
+    else if(old_diff_glob == 10){
+      if(check_right_and_left(card_num + 1)){
+        brake(motor_left, motor_right); 
+        //delay(1000);
+        target -= 90;
+        if (target <= -180){
+          target += 360;
+        }
+        is_right = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+      else{
+        brake(motor_left, motor_right); 
+        //delay(1000);              
+        target += 90;
+        if (target > 180){
+          target -= 360;
+        }
+        is_left = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+    }
+    else if(old_diff_glob == -1){
+      if(check_right_and_left(card_num + 10)){
+        brake(motor_left, motor_right); 
+        //delay(1000);
+        target -= 90;
+        if (target <= -180){
+          target += 360;
+        }
+        is_right = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+      else{
+        brake(motor_left, motor_right); 
+        //delay(1000);              
+        target += 90;
+        if (target > 180){
+          target -= 360;
+        }
+        is_left = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+    }
+    else if(old_diff_glob == -10){
+      if(check_right_and_left(card_num - 1)){
+        brake(motor_left, motor_right); 
+        //delay(1000);
+        target -= 90;
+        if (target <= -180){
+          target += 360;
+        }
+        is_right = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+      else{
+        brake(motor_left, motor_right); 
+        //delay(1000);              
+        target += 90;
+        if (target > 180){
+          target -= 360;
+        }
+        is_left = true;
+        is_forward = false;
+        flag_dur = true;
+      }
+    }
+    time_zero = millis();
+    
+    path.clear();
+    time_zero = millis();
+    digitalWrite(yellow, LOW);
+    digitalWrite(red, LOW);
+    old_card_num = card_num;
+    ultrasonic_error_happened = true;
+    old_card_num = card_num;
+    count_ultrasonic = 0;
+    wait_for_ultrasonic = false;
+  }
+  if(ultrasonic_error_happened){
+    if (is_left == true || is_right == true){
+      last_error = 0;
+      integral = 0;
+      rotate();
+      time_zero = millis();
+      //return;
+    }
+  }
+  if(wait_for_ultrasonic){
+    if (millis() - startMillis >= 500) {
+      Serial.println("Waited for 1000 milliseconds");
+      wait_for_ultrasonic = check_ultrasonic();
+      bool wait_for_ultrasonic_temp1 = check_ultrasonic();
+      bool wait_for_ultrasonic_temp2 = check_ultrasonic();
+      if(wait_for_ultrasonic_temp2 || wait_for_ultrasonic_temp1 || wait_for_ultrasonic){
+        wait_for_ultrasonic = true;
+      }
+      count_ultrasonic += 1;
+      startMillis = millis();
+      dur = true;
+      if(!wait_for_ultrasonic){
+        count_ultrasonic = 0;
+        dur = false;
+      } 
+    }
+    else{
+      return;
+    }
+  }
+  
 
   if(march == 1){ // march == 1
     if(waiting_for_base){
       flag_target_found_for_returning_base = false;
       waiting_for_base = false;
 
-      GetTargetTiles(Target1, Target2, Target3, mu.uiMUTargetLocation, g_global);
+      GetTargetTiles(Target1, Target2, Target3, mu.uiMUTargetLocation, g_global,g1,g2,g3);
       if (MU_number == 1){
         go_to_target_location = Target1;
       }
@@ -623,9 +835,7 @@ void loop() {
       time_zero = millis();
       commmunicated_with_base = false;
     }
-    else if(flag_target_found_for_returning_base && !return_base){ //flag_target_found_for_returning_base
-      //brake(motor_left, motor_right); 
-      //delay(300);
+    if((flag_target_found_for_returning_base && !return_base) && (check_base_com_tile(card_num))){
       is_target_found_through_base = true;
       return_base = true;
       is_searching = false;
@@ -635,34 +845,32 @@ void loop() {
       commmunicated_with_base = true;
     }
   }
+  /*
+  if((bu.uiBUWhoFound != NF) && (flag_target_found_for_returning_base && !return_base) && (check_base_com_tile(card_num))){
+    is_target_found_through_base = true;
+    return_base = true;
+    is_searching = false;
+    flag_target_found_for_returning_base = false;   
+    flag_target_found_before = true; 
+    time_zero = millis();
+    commmunicated_with_base = true;
+
+  }
+  */
 
   /**/
-
-  if(false){ //(first_thing_first || is_going_sub_grid)
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    // Sets the trigPin on HIGH state for 10 micro seconds
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    
-    // // Reads the echoPin, returns the sound wave travel time in microseconds
-    duration = pulseIn(echoPin, HIGH, 3000);
-    
-    // // Calculate the distance
-    distanceCm = duration * SOUND_SPEED/2;
-    Serial.println(distanceCm);
-    if((distanceCm < 5) && (distanceCm != 0.00)){
-      brake(motor_left, motor_right); 
-      rfid.PCD_StopCrypto1();
-      time_zero = millis();
-      
-      return;
+  if(commmunicated_with_base){
+    if (millis() - previousRedMillis >= redInterval) {
+      previousRedMillis = millis();  // Save the last time the LED state was changed
+      redLedState = !redLedState;    // Toggle the LED state
+      digitalWrite(red, redLedState); // Apply the new state to the LED
     }
   }
 
+
   
   if(edge_error_happened){
+    finished = true;
     if(is_backward){
       PID_backward();
     }
@@ -710,20 +918,13 @@ void loop() {
 
   }
   /**/
-  if(setup_path){
+  if(setup_path && !edge_error_happened){
 
-    if(error_path_setup){
-      error_path_setup = false;
-      //is_forward = is_forward;
-      //is_backward = is_backward;
-    }
     if(flag_first_pos){
       time_zero = millis();
     }
 
-    if(is_backward){
-      Serial.print("a");
-      
+    if(is_backward){      
       if(((millis() - time_zero)> (1.3*time_delay)) && ((error_case == 4) || (error_case == 5))){
         //brake(motor_left, motor_right); 
         //delay(300);
@@ -753,7 +954,6 @@ void loop() {
     
 
     if (is_forward){
-      //Serial.println("forward");
       PID_forward();
     }
 
@@ -810,8 +1010,16 @@ void loop() {
           total_edge = 0;
         }
         if((total_edge == 3) || (total_edge == 4) || (total_edge == 5)){
+          reset_global_var();
+          error_path_setup = true;
+          setup_path = true;
+          path.clear();
+          time_zero = millis();
+          digitalWrite(yellow, LOW);
+          digitalWrite(red, LOW);
+          old_card_num = card_num;
           edge_error_happened = true;
-          setup_path = false;
+          //setup_path = false;
           is_backward = true;
           return;
         }
@@ -842,6 +1050,7 @@ void loop() {
     time_delay = time_delay_const;
     digitalWrite(yellow, LOW);
     digitalWrite(red, LOW);
+    
 
     if((found_target) && (card_num != target_location)){
       card_num_under_target = card_num;
@@ -918,8 +1127,16 @@ void loop() {
         total_edge = 0;
       }
       if((total_edge == 3) || (total_edge == 4) || (total_edge == 5)){
+        reset_global_var();
+        error_path_setup = true;
+        setup_path = true;
+        path.clear();
+        time_zero = millis();
+        digitalWrite(yellow, LOW);
+        digitalWrite(red, LOW);
+        old_card_num = card_num;
         edge_error_happened = true;
-        setup_path = false;
+        //setup_path = false;
         is_backward = true;
         return;
       }
@@ -1013,29 +1230,41 @@ void loop() {
           stop_list = path.back();
         }
         
-        setup_path = false; 
+        
         old_diff_glob = second_position - first_position;
         int first_direction = encode_direction(path[0], path[1], old_diff_glob);
         if(first_direction == 0){
           is_forward = true;
           is_backward = false;
+          old_card_num = card_num;
+          old_diff_glob = path[1] - path[0];
+          path.erase(path.begin());
+          
         }
-        else{
+        else if((first_direction == 2) || (first_direction == 1)){
           is_forward = false;
           is_backward = false;
         }
-
+        else if((first_direction == 3)){
+          is_forward = false;
+          is_backward = true;
+          old_card_num = card_num;
+          old_diff_glob = path[1] - path[0];
+          path.erase(path.begin());
+        }
         time_zero = millis();
         error_case = 4;
         step_index = 0;
         old_path.push_back(first_position);
+
+        setup_path = false; 
         
 
       }
     }
   }
 
-  if(!dur && !setup_path) {
+  if(!dur && !setup_path && !edge_error_happened) {
     
     if(is_backward){
       if(((millis() - time_zero)> (1.3*time_delay)) && ((error_case == 4) || (error_case == 5))){
@@ -1069,10 +1298,11 @@ void loop() {
       PID_forward();
     }
     else if (is_left == true || is_right == true){
-      last_error = 0;
-      integral = 0;
+      //last_error = 0;
+      //integral = 0;
       rotate();
       time_zero = millis();
+      return;
     }
     else if(is_backward){
       PID_backward();
@@ -1121,8 +1351,17 @@ void loop() {
         total_edge = 0;
       }
       if((total_edge == 3) || (total_edge == 4) || (total_edge == 5)){
+        reset_global_var();
+        error_path_setup = true;
+        setup_path = true;
+        path.clear();
+        time_zero = millis();
+        digitalWrite(yellow, LOW);
+        digitalWrite(red, LOW);
+        old_card_num = card_num;
         edge_error_happened = true;
-        setup_path = false;
+        //setup_path = false;
+        //dur = true;
         is_backward = true;
         return;
       }
@@ -1147,6 +1386,9 @@ void loop() {
 
     card_num = encodeRFID(rfid.uid.uidByte);
     mu.uiMUCurrentLocation = card_num;
+      // Get the current time
+    // Check if the specified interval has passed
+    
 
     time_zero = millis();
     count_number_of_errors = 0;
@@ -1208,7 +1450,7 @@ void loop() {
       digitalWrite(red, LOW);
 
     }
-    if(is_target_found_through_base || (is_searching && (stop_list == card_num))){
+    if(is_target_found_through_base || (is_searching && (stop_list == card_num) && (path[0] == stop_list))){
       time_delay = time_delay_const;
       brake(motor_left, motor_right); 
       //delay(300);
@@ -1349,6 +1591,16 @@ void loop() {
     // 4: arkaya git saga don
     // 5: arkaya git sola don
     else{
+      if(check_near_base_tile(card_num) && is_forward){
+        wait_for_ultrasonic = check_ultrasonic();
+        if(wait_for_ultrasonic){
+          return;
+        }
+      }
+      else{
+        wait_for_ultrasonic = false;
+      }
+      startMillis = millis();
       if((error_case == 5) && (old_card_num == card_num)) {
         
         which_edge = edge_case(card_num);
@@ -1394,8 +1646,15 @@ void loop() {
         }
 
         if((total_edge == 3) || (total_edge == 4) || (total_edge == 5)){
+          reset_global_var();
+          error_path_setup = true;
+          setup_path = true;
+          path.clear();
+          time_zero = millis();
+          digitalWrite(yellow, LOW);
+          digitalWrite(red, LOW);
+          old_card_num = card_num;
           edge_error_happened = true;
-          setup_path = false;
           is_backward = true;
           return;
         }
@@ -1610,15 +1869,7 @@ void loop() {
           is_backward = true;
           return;
         }
-
-        // 1: saga dogru git
-  // 2: sola dogru git
-  // 3: arkaya git
-  // 4: arkaya git saga don
-  // 5: arkaya git sola don
       }
-      
-      /**/
     }
   }
   rfid.PCD_StopCrypto1();
@@ -1656,6 +1907,26 @@ void not_finding_any_card(int which_case){
   }
   */
 }
+bool check_base_com_tile(int loc){
+  int good_tile[] = {21,31,41,52,63,64,65,56,47,37,27,16,5,4,3,12,13,22,32,42,53,54,55,46,36,26,15,14,23,33,43,44,45,35,25,24};
+  for(int edge_loc:good_tile){
+    if(loc == edge_loc){
+      return true;
+    }
+  }
+  return false;
+}
+
+bool check_near_base_tile(int loc){
+  int good_tile[] = {33, 24, 35, 44, obs1 - 10, obs1 - 1, obs1 + 1, obs1 + 10, obs2 - 10, obs2 - 1, obs2 + 1, obs2 + 10, obs3 - 10, obs3 - 1, obs3 + 1, obs3+ 10};
+  for(int edge_loc:good_tile){
+    if(loc == edge_loc){
+      return false;
+    }
+  }
+  return true;
+}
+
 int edge_case_of_obs(int loc){
 
 
@@ -1887,6 +2158,30 @@ bool check_right_and_left(int loc){
   }
   return x;
 
+}
+
+int check_ultrasonic(){
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH, 3000);
+  
+  // // Calculate the distance
+  distanceCm = duration * SOUND_SPEED/2;
+  time_zero = millis();
+  if((distanceCm < 15) && (distanceCm != 0.00)){
+    Serial.println(distanceCm);
+    brake(motor_left, motor_right); 
+    rfid.PCD_StopCrypto1();
+    dur = true;
+    return true;
+  }
+  return false;
 }
 
 void rotate_edge(){
@@ -2447,6 +2742,15 @@ void rotate (){
       if(edge_error_happened){
         edge_error_happened = false;
         setup_path = true;
+        finished = false;
+        reset_global_var();
+      }
+      if(ultrasonic_error_happened){
+        ultrasonic_error_happened = false;
+        setup_path = true;
+        finished = false;
+        reset_global_var();
+        dur = false;
       }
     }
     else{
@@ -2465,6 +2769,15 @@ void rotate (){
       if(edge_error_happened){
         edge_error_happened = false;
         setup_path = true;
+        finished = false;
+        reset_global_var();
+      }
+      if(ultrasonic_error_happened){
+        ultrasonic_error_happened = false;
+        setup_path = true;
+        finished = false;
+        reset_global_var();
+        dur = false;
       }
     }
     else{
@@ -2479,48 +2792,65 @@ void rotate (){
 /******************MOTOR FUNCTIONS******************/
 
 int check_closest_tile(int sub_tile,int loc){
-  int firstDigit, secondDigit, loc_tile;
-  if (loc >= 10 && loc <= 99) {
-    firstDigit = loc / 10;
-    secondDigit = loc % 10;
+  vector<int> tiles;
+  int closest_element;
+  if (sub_tile == 1){
+    tiles = g1.Tiles_IDs_vector();
+    closest_element = findClosestElement(tiles,loc);
   }
-  else{
-    firstDigit = 0;
-    secondDigit = loc;
+  else if (sub_tile == 2){
+    tiles = g2.Tiles_IDs_vector();
+    closest_element = findClosestElement(tiles,loc);
   }
-  if(secondDigit <= 3){
-    loc_tile = 1;
+  else if (sub_tile == 3){
+    tiles = g3.Tiles_IDs_vector();
+    closest_element = findClosestElement(tiles,loc);
   }
-  else if(firstDigit < 4){
-    loc_tile = 2;
-  }
-  else{
-    loc_tile = 3;
-  }
-
-  if(sub_tile == 1){
-    return firstDigit*10 + 3;
-  }
-  if(sub_tile == 2){
-    if(loc_tile == 1){
-      return firstDigit*10 + 4;
-    }   
-    else if(secondDigit != 4){
-      return 30 + secondDigit;
-    }
-    else{
-      return 35;
-    }
-  }
-  if(sub_tile == 3){
-    if(loc_tile == 1){
-      return firstDigit*10 + 4;
-    }   
-    else{
-      return 40 + secondDigit;
-    }
-  }
+  return closest_element;
 } 
+// int check_closest_tile(int sub_tile,int loc){
+//   int firstDigit, secondDigit, loc_tile;
+//   if (loc >= 10 && loc <= 99) {
+//     firstDigit = loc / 10;
+//     secondDigit = loc % 10;
+//   }
+//   else{
+//     firstDigit = 0;
+//     secondDigit = loc;
+//   }
+//   if(secondDigit <= 3){
+//     loc_tile = 1;
+//   }
+//   else if(firstDigit < 4){
+//     loc_tile = 2;
+//   }
+//   else{
+//     loc_tile = 3;
+//   }
+
+//   if(sub_tile == 1){
+//     return firstDigit*10 + 3;
+//   }
+//   if(sub_tile == 2){
+//     if(loc_tile == 1){
+//       return firstDigit*10 + 4;
+//     }   
+//     else if(secondDigit != 4){
+//       return 30 + secondDigit;
+//     }
+//     else{
+//       return 35;
+//     }
+//   }
+//   if(sub_tile == 3){
+//     if(loc_tile == 1){
+//       return firstDigit*10 + 4;
+//     }   
+//     else{
+//       return 40 + secondDigit;
+//     }
+//   }
+// } 
 
 
 /*

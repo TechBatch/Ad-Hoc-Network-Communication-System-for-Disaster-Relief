@@ -249,7 +249,6 @@ typedef struct BU_STRUCT
 }BU;
 
 
-
 /*********************************/
 
 /**************COMMUNICATION FUNC DEF*****************/
