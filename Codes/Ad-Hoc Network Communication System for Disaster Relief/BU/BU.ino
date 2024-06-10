@@ -277,11 +277,11 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.print("MU1 knows the target location: ");
                     Serial.println(mu1.uiMUTargetLocation, HEX);
                     mu1.uiMUID = QueueNumber;
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU1);
-                    setTalk(&bu, &mu1);
                     giveQueueNumber(&bu, &mu1);
                     sayTargetLocation(&bu, &mu1);
                     giveWhoFound(&bu,&mu1);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU1);
+                    setTalk(&bu, &mu1);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;
@@ -304,11 +304,11 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.print("MU2 knows the target location: ");
                     Serial.println(mu2.uiMUTargetLocation, HEX);
                     mu2.uiMUID = QueueNumber;
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU2);
-                    setTalk(&bu, &mu2);
                     giveQueueNumber(&bu, &mu2);
                     sayTargetLocation(&bu, &mu2);
                     giveWhoFound(&bu,&mu2);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU2);
+                    setTalk(&bu, &mu2);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;
@@ -331,11 +331,11 @@ void taskReceiveMessageBU(void *pvParameters){
                     Serial.print("MU3 knows the target location: ");
                     Serial.println(mu3.uiMUTargetLocation, HEX);
                     mu3.uiMUID = QueueNumber;
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU3);
-                    setTalk(&bu, &mu3);
                     giveQueueNumber(&bu,  &mu3);
                     sayTargetLocation(&bu, &mu3);
                     giveWhoFound(&bu,&mu3);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU3);
+                    setTalk(&bu, &mu3);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;
@@ -360,13 +360,13 @@ void taskReceiveMessageBU(void *pvParameters){
                   if(!checkReceivement(&mu1)) //Eğer daha önce baseden önemli mesaj almadıysa
                   {
                     Serial.println("BU started to communicate with MU1");
-                    setTalk(&bu,&mu1);
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU1);
                     if(mu1.uiMUID == INIT)
                     {
                       mu1.uiMUID = QueueNumber;
                     }
                     giveQueueNumber(&bu,&mu1);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU1);
+                    setTalk(&bu,&mu1);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;
@@ -383,13 +383,13 @@ void taskReceiveMessageBU(void *pvParameters){
                   if(!checkReceivement(&mu2)) //Eğer daha önce baseden önemli mesaj almadıysa
                   {
                     Serial.println("BU started to communicate with MU2");
-                    setTalk(&bu,&mu2);
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU2);
                     if(mu2.uiMUID == INIT)
                     {
                       mu2.uiMUID = QueueNumber;
                     }
                     giveQueueNumber(&bu,&mu2);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU2);
+                    setTalk(&bu,&mu2);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;
@@ -406,13 +406,13 @@ void taskReceiveMessageBU(void *pvParameters){
                   if(!checkReceivement(&mu3)) //Eğer daha önce baseden önemli mesaj almadıysa
                   {
                     Serial.println("BU started to communicate with MU3");
-                    setTalk(&bu,&mu3);
-                    setReceivement(&bu, BU_MSG_RECEIVED_MU3);
                     if(mu3.uiMUID == INIT)
                     {
                       mu3.uiMUID = QueueNumber;
                     }
                     giveQueueNumber(&bu,&mu3);
+                    setReceivement(&bu, BU_MSG_RECEIVED_MU3);
+                    setTalk(&bu,&mu3);
                     if(QueueNumber<THIRD)
                     {
                       QueueNumber++;

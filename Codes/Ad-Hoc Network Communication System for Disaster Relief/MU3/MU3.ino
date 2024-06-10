@@ -155,7 +155,7 @@ int MU_number = mu.uiMUHeader - 1; //BURAYA DİKKAT EDİN
 int Target1, Target2, Target3; 
 // Obstacles ELLE GIRILECEK OBSLER
 int obs1 = 17;
-int obs2 = 28; 
+int obs2 = 68; 
 int obs3 = 73; 
 // Grid initialitions
 Grid g1       = createSubGrid(1, obs1, obs2, obs3);
@@ -835,6 +835,7 @@ void loop() {
       time_zero = millis();
       commmunicated_with_base = false;
     }
+    /*
     if((flag_target_found_for_returning_base && !return_base) && (check_base_com_tile(card_num))){
       is_target_found_through_base = true;
       return_base = true;
@@ -844,8 +845,9 @@ void loop() {
       time_zero = millis();
       commmunicated_with_base = true;
     }
+    */
   }
-  /*
+  
   if((bu.uiBUWhoFound != NF) && (flag_target_found_for_returning_base && !return_base) && (check_base_com_tile(card_num))){
     is_target_found_through_base = true;
     return_base = true;
@@ -856,7 +858,7 @@ void loop() {
     commmunicated_with_base = true;
 
   }
-  */
+  /**/
 
   /**/
   if(commmunicated_with_base){
